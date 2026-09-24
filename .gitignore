@@ -1,0 +1,5 @@
+__pycache__/
+node_modules/
+vendor/larch.new/
+larch-*/
+.superpowers/
