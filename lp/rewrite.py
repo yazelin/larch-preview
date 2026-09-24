@@ -171,6 +171,11 @@ def start_at_line(data, line):
         first.update(state['stage'])
     data['dialogueLines'] = [first] + lines[line + 1:]
     data['text'], data['speaker'] = first.get('text', ''), first.get('speaker', '')
+    # 播放器進卡時先用卡片層的背景與 BGM，第一句自己的會被略過，所以卡片層也要同步
+    if first.get('background'):
+        data['background'] = first['background']
+    for k in _BGM:
+        if k in first: data[k] = first[k]
 
 
 def jump_to_card(project, node_id, line=0):

@@ -108,6 +108,7 @@ class Jump(unittest.TestCase):
         self.assertEqual((d['dialogueLines'][0]['background'], d['dialogueLines'][0]['bgm']), ('y.png', 'm2.mp3'))
         self.assertEqual(d['dialogueLines'][0]['bgmVolume'], 0.2)
         self.assertEqual(d['text'], '三')
+        self.assertEqual((d['background'], d['bgm']), ('y.png', 'm2.mp3'))   # 卡片層也要同步，播放器進卡時讀的是它
         q, _, _ = rewrite.jump_to_card(p, 'a', 9)          # 超出範圍就當成從頭播
         self.assertEqual(len(q['boards'][0]['nodes'][0]['data']['dialogueLines']), 4)
 
