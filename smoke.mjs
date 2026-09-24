@@ -23,7 +23,7 @@ const browser = await chromium.launch({ executablePath: CHROME, headless: false,
 let page;
 const fail = async msg => {
   console.error('FAIL', msg);
-  for (const t of trouble.slice(-30)) console.error('  ', t);
+  for (const t of trouble.filter(t => !t.startsWith('console: Failed to load resource')).slice(-30)) console.error('  ', t);
   await page?.screenshot({ path: 'smoke-fail.png' }).catch(() => {});
   await browser.close(); server.kill(); rmSync(dir, { recursive: true }); process.exit(1); };
 const step = msg => console.log('ok  ', msg);
@@ -48,6 +48,13 @@ try {
   await frame.getByRole('button', { name: /開始遊戲/ }).click({ timeout: 30000 });
   if (!await until('你走進一個綠色的房間。')) await fail('標題畫面按開始後沒看到第一句');
   step('真播放器從標題畫面開始播');
+
+  const visible = await page.evaluate(() => {
+    const r = document.querySelector('#fb-open').getBoundingClientRect();
+    return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.id;
+  });
+  if (visible !== 'fb-open') await fail(`開始播之後回饋按鈕被蓋住了（最上層是 ${visible}）`);
+  step('開始播之後回饋按鈕還看得到');
 
   for (let i = 0; i < 6 && !await until('歡迎來到示範專案。', 800); i++) await frame.locator('.vn2-box').click();
   if (!await until('歡迎來到示範專案。', 1000)) await fail('點對話框翻不到第二句');

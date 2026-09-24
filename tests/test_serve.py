@@ -65,7 +65,7 @@ class Serve(unittest.TestCase):
         self.assertEqual(self.get('/larch-mark.png?v=4')[1], 'image/png')
         self.assertEqual(self.status_of('/nope.png'), 404)
         self.assertIn(b'id="player"', self.get('/')[2])
-        self.assertEqual(json.loads(self.get('/api/emojis')[2]), {})
+        self.assertEqual(self.status_of('/api/emojis'), 404)   # 回 {} 會讓播放器以為已登入、有存檔
         self.assertEqual(self.post('/api/presence/beat', {}), {})
 
     def test_card_jump(self):

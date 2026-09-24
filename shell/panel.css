@@ -10,7 +10,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
   padding: 6px 12px; border-radius: 6px; background: rgba(20,20,20,.85); border: 1px solid var(--accent);
   z-index: 10; pointer-events: none; }
 #banner.error { border-color: var(--danger); }
-#fb-open { position: fixed; right: 16px; bottom: 72px; z-index: 10; padding: 8px 14px; border-radius: 999px;
+#fb-open { position: fixed; left: 16px; top: 16px; z-index: 10; padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
 body.grabbing #fb-open, body.grabbing #banner { visibility: hidden; }
 dialog#fb { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;

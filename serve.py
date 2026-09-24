@@ -133,7 +133,8 @@ def make_server(preview, port, vendor=VENDOR):
             except Exception as e:
                 return self.send(500, {'error': describe(e)})
             if path.startswith('/api/'):
-                return self.send(200, {})
+                # 不認得的 API 回 404，跟播放器在未登入、離線時看到的一樣；回 {} 會被當成已登入、有存檔
+                return self.send(404, {'error': 'not available offline'})
             if path.startswith('/files/'):
                 return self.send_file(safe_join(preview.dir, path[len('/files/'):]))
             if path.startswith('/shell/'):

@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="/shell/panel.css">
 </head>
 <body>
-  <iframe id="player" src="/play/market/local" allow="autoplay; fullscreen"></iframe>
+  <!-- 不給 fullscreen：播放器開場會自己切全螢幕，iframe 一全螢幕就蓋掉回饋按鈕。要全螢幕按 F11。 -->
+  <iframe id="player" src="/play/market/local" allow="autoplay; fullscreen 'none'"></iframe>
   <div id="banner" hidden></div>
   <button id="fb-open" type="button" title="回饋（F）">回饋</button>
 
