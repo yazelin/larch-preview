@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- React 掛載之前的失敗（模組解析、chunk 載不到、語法不支援）沒有 ErrorBoundary
+         可以接，使用者只會看到一片白。行動裝置又打不開 console，等於完全無從查起。
+         這段把那種錯誤畫到畫面上，讓手機截圖就能當錯誤報告。
+         刻意寫成 ES5 且不依賴任何外部資源 —— 它要能在「連 bundle 都解析不了」的
+         瀏覽器上執行，否則就失去意義。 -->
+    <script>
+      (function () {
+        var shown = false;
+        function report(title, detail) {
+          if (shown) return;
+          var root = document.getElementById('root');
+          // React 已經接手的話交給 ErrorBoundary，那邊的訊息更完整。
+          if (root && root.childElementCount > 0) return;
+          shown = true;
+          function paint() {
+            var box = document.createElement('pre');
+            box.setAttribute('data-larch-boot-error', '');
+            box.style.cssText = 'margin:0;padding:20px;font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;'
+              + 'white-space:pre-wrap;word-break:break-word;color:#7a1d1d;background:#fff6f6;min-height:100vh';
+            box.textContent = 'Larch 啟動失敗\n\n' + title + '\n' + detail
+              + '\n\n' + navigator.userAgent;
+            (document.body || document.documentElement).appendChild(box);
+          }
+          if (document.body) paint();
+          else document.addEventListener('DOMContentLoaded', paint);
+        }
+        // capture 階段才收得到 <script>/<link> 的載入失敗。
+        window.addEventListener('error', function (event) {
+          var target = event.target;
+          if (target && target !== window && target.tagName) {
+            report('資源載入失敗：' + target.tagName, target.src || target.href || '');
+            return;
+          }
+          report(event.message || 'Error', (event.filename || '') + (event.lineno ? ':' + event.lineno : ''));
+        }, true);
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          report(
+            reason && reason.message ? reason.message : String(reason),
+            (reason && reason.stack) || ''
+          );
+        });
+      })();
+    </script>
+    <meta name="theme-color" content="#ffffff" />
+    <!-- HTML-in-Canvas API 的 origin trial token 由 vite.config.ts 在 build 時注入，
+         來源是 VITE_HTML_IN_CANVAS_OT_TOKEN（見 .env.example）。沒設就不注入，
+         Bend 會自動降級成普通捲動頁面。 -->
+    <!-- 官方小芽 Logo：透明 PNG 用於網站與瀏覽器頁籤；
+         apple-touch / PWA 使用有安全留白的不透明版本，避免 iOS 將透明區塊壓成黑底。 -->
+    <link rel="icon" type="image/png" sizes="512x512" href="/larch-mark.png?v=4" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png?v=4" />
+    <link rel="apple-touch-icon" href="/larch-app-icon.png?v=4" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iPhone 的 Safari 不給網頁 Fullscreen API（只有 <video> 能全螢幕），所以在那裡
+         「真的全螢幕遊玩」的唯一一條路就是從主畫面開啟。manifest 的 display:standalone
+         只有 iOS 17 以後才讀得到，這兩行讓更早的版本也照樣以獨立 app 啟動。
+         狀態列刻意用不透明的 black 而不是 black-translucent：後者會讓內容鑽到狀態列底下，
+         而工作區的頂欄並沒有留安全區內距。 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Larch" />
+    <script>
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        window.__larchInstallPrompt = event;
+        window.dispatchEvent(new Event('larch:install-ready'));
+      });
+      if ('serviceWorker' in navigator) {
+        addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+      }
+    </script>
+    <meta name="description" content="Larch 是專為互動敘事打造的視覺故事工作室：寫分支劇情、管理角色與表情、即時試玩，並匯出 JSON、Unity Package 或網頁版本。" />
+    <meta property="og:title" content="Larch — Write clearly. Play instantly. Ship to Unity." />
+    <meta property="og:description" content="Visual story canvas, AI character studio, Chinese TTS, instant playtest, and production-ready JSON, Unity Package, Web, and Live API exports." />
+    <meta property="og:image" content="https://larch.ink/larch-social-card.png?v=6" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Larch 小生物 Logo、角色立繪、故事卡片與對話框" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Larch — Visual Story Engine for Unity" />
+    <meta name="twitter:description" content="Write branching stories, define AI characters, play instantly, and ship to Unity." />
+    <meta name="twitter:image" content="https://larch.ink/larch-social-card.png?v=6" />
+    <meta name="twitter:image:alt" content="Larch 小生物 Logo、角色立繪、故事卡片與對話框" />
+    <script>
+      try {
+        if (!localStorage.getItem('larch-theme-light-default-v2')) {
+          localStorage.setItem('larch-theme', 'light');
+          localStorage.setItem('larch-theme-light-default-v2', '1');
+        }
+        document.documentElement.dataset.theme = localStorage.getItem('larch-theme') === 'dark' ? 'dark' : 'light';
+      } catch {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
+    <title>Larch — Visual Story Engine for Unity</title>
+    <script type="module" crossorigin src="/assets/index-lg9nGv1N.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/react-core-CuKebU_E.js">
+    <link rel="modulepreload" crossorigin href="/assets/pixi-engine-BjJSJWAc.js">
+    <link rel="modulepreload" crossorigin href="/assets/motion-engine-Dzqu7Rr8.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BC1zNyBb.css">
+  </head>
+  <body>
+    <!-- 頭像雲朵使用一份全站共用的 SVG turbulence，避免每個留言頭像各開一個 canvas。
+         動畫只在 CSS 的 no-preference media query 內套用；reduced-motion 會保留靜態原圖。 -->
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden">
+      <defs>
+        <filter id="avatar-cloud-roll-filter" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.028" numOctaves="2" seed="11" stitchTiles="stitch" result="cloud-noise">
+            <animate attributeName="baseFrequency" values="0.012 0.028;0.022 0.046;0.012 0.028" dur="4.2s" repeatCount="indefinite"/>
+          </feTurbulence>
+          <feOffset in="cloud-noise" dx="-9" dy="2" result="rolling-cloud-noise">
+            <animate attributeName="dx" values="-9;9;-9" dur="4.8s" repeatCount="indefinite"/>
+            <animate attributeName="dy" values="2;-4;2" dur="5.6s" repeatCount="indefinite"/>
+          </feOffset>
+          <feDisplacementMap in="SourceGraphic" in2="rolling-cloud-noise" scale="10" xChannelSelector="R" yChannelSelector="G">
+            <animate attributeName="scale" values="8;18;8" dur="3.2s" repeatCount="indefinite"/>
+          </feDisplacementMap>
+        </filter>
+      </defs>
+    </svg>
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+name: sync-larch
+on:
+  schedule:
+    - cron: '17 22 * * *'   # 台灣時間 06:17
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 版本沒變也重抓並跑 smoke
+        type: boolean
+        default: false
+permissions:
+  contents: write
+  issues: write
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - id: sync
+        run: python3 sync.py ${{ inputs.force && '--force' || '' }}
+      - if: steps.sync.outputs.changed == 'true'
+        run: xvfb-run -a node smoke.mjs
+        env:
+          CHROME: /usr/bin/google-chrome
+      - if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/larch
+          git diff --cached --quiet || { git commit -m "chore: 同步 Larch 前端 $(cat vendor/larch/VERSION)" && git push; }
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create sync-failure --color B60205 2>/dev/null || true
+          if [ -z "$(gh issue list --label sync-failure --state open --json number -q '.[].number')" ]; then
+            gh issue create --label sync-failure --title "Larch 前端同步失敗" \
+              --body "舊快取照用，本機預覽不受影響。紀錄：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi

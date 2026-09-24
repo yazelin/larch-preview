@@ -1,0 +1,1 @@
+const i={image:{muse:2,api:5,apiHigh:8},cutout:2,videoH3:20,story:2,minigame:4,translation:{nodesPerCredit:20,minimum:1},voice:{charactersPerCredit:700,minimum:1},characterChat:1,storyAnalysis:{charactersPerCredit:12e3,minimum:2},runtimeDialogue:1,runtimeDirector:2},t=e=>Math.max(i.voice.minimum,Math.ceil(Math.max(0,e)/i.voice.charactersPerCredit));export{i as A,t as v};

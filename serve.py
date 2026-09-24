@@ -106,8 +106,8 @@ def make_server(preview, port, vendor=VENDOR):
                 return self.send_file(os.path.join(SHELL, 'index.html'))
             if path.startswith(('/assets/', '/sfx/')):
                 return self.send_file(safe_join(vendor, path.lstrip('/')))
-            if '.' in os.path.basename(path):
-                return self.send(404, {'error': 'not found'})
+            if '.' in os.path.basename(path):   # 根目錄的 logo、favicon
+                return self.send_file(safe_join(os.path.join(vendor, 'root'), path.lstrip('/')))
             return self.send_file(os.path.join(vendor, 'index.html'))   # SPA 萬用路由
 
         def do_POST(self):

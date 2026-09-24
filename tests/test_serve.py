@@ -17,6 +17,9 @@ class Serve(unittest.TestCase):
             f.write('<!doctype html><title>larch</title>')
         with open(os.path.join(self.vendor, 'assets', 'index-abc.js'), 'w') as f:
             f.write('console.log(1)')
+        os.makedirs(os.path.join(self.vendor, 'root'))
+        with open(os.path.join(self.vendor, 'root', 'larch-mark.png'), 'wb') as f:
+            f.write(b'\x89PNG')
         self.pj = os.path.join(self.tmp, 'proj', 'project.json')
         self.srv = serve.make_server(serve.Preview(self.pj), 0, self.vendor)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
@@ -59,6 +62,8 @@ class Serve(unittest.TestCase):
         self.assertIn(b'<title>larch</title>', self.get('/play/market/local')[2])
         self.assertIn('javascript', self.get('/assets/index-abc.js')[1])
         self.assertEqual(self.status_of('/assets/missing.js'), 404)
+        self.assertEqual(self.get('/larch-mark.png?v=4')[1], 'image/png')
+        self.assertEqual(self.status_of('/nope.png'), 404)
         self.assertIn(b'id="player"', self.get('/')[2])
         self.assertEqual(json.loads(self.get('/api/emojis')[2]), {})
         self.assertEqual(self.post('/api/presence/beat', {}), {})

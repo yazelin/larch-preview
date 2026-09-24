@@ -1,0 +1,1 @@
+let t=0;const a=new Set;function r(){return t>=8?!1:(t+=1,!0)}function i(){t=Math.max(0,t-1);const e=a.values().next().value;e&&(a.delete(e),queueMicrotask(e))}function u(e){let n=!0;const s=()=>{n&&e()};return a.add(s),()=>{n=!1,a.delete(s)}}export{r as c,i as r,u as w};
