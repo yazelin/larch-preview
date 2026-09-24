@@ -97,6 +97,20 @@ class Jump(unittest.TestCase):
         q, _, _ = rewrite.jump_to_card(p, 's2')
         self.assertNotIn('stage', q['boards'][0]['nodes'][2]['data'])
 
+    def test_jump_to_line_carries_state_from_earlier_lines(self):
+        p = {'activeBoardId': 'b', 'settings': {}, 'boards': [{'id': 'b', 'nodes': [
+            card('a', type='dialogue', start=True, background='x.png', bgm='m1.mp3', dialogueLines=[
+                {'text': '一'}, {'text': '二', 'background': 'y.png', 'bgm': 'm2.mp3', 'bgmVolume': 0.2},
+                {'text': '三'}, {'text': '四', 'background': 'z.png'}])], 'edges': []}]}
+        q, _, _ = rewrite.jump_to_card(p, 'a', 2)
+        d = q['boards'][0]['nodes'][0]['data']
+        self.assertEqual([l['text'] for l in d['dialogueLines']], ['三', '四'])
+        self.assertEqual((d['dialogueLines'][0]['background'], d['dialogueLines'][0]['bgm']), ('y.png', 'm2.mp3'))
+        self.assertEqual(d['dialogueLines'][0]['bgmVolume'], 0.2)
+        self.assertEqual(d['text'], '三')
+        q, _, _ = rewrite.jump_to_card(p, 'a', 9)          # 超出範圍就當成從頭播
+        self.assertEqual(len(q['boards'][0]['nodes'][0]['data']['dialogueLines']), 4)
+
     def test_board_jump(self):
         p = demo()
         p['boards'][0]['nodes'].append(card('j', type='boardJump', jumpBoardId='b2', jumpNodeId='x1'))

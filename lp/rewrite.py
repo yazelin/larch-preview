@@ -155,8 +155,26 @@ def carried_state(nodes):
     return state
 
 
-def jump_to_card(project, node_id):
-    """讓播放器直接從 node_id 開始：設 start、關標題畫面、補上延續下來的狀態。"""
+def start_at_line(data, line):
+    """把對話卡切成從第 line 句開始，前面幾句留下的背景、BGM、舞台補到新的第一句上。
+    播放器沒有「回上一句」，按 ← 就是靠這個重新從那一句播。"""
+    lines = data.get('dialogueLines') or []
+    if line <= 0 or line >= len(lines):
+        return
+    state = carried_state([{'data': {'dialogueLines': lines[:line]}}])
+    first = dict(lines[line])
+    if state.get('background') and not first.get('background'):
+        first['background'] = state['background']
+    if state.get('bgm') and not first.get('bgm'):
+        first.update(state['bgm'])
+    if state.get('stage') and not _owns_stage(first):
+        first.update(state['stage'])
+    data['dialogueLines'] = [first] + lines[line + 1:]
+    data['text'], data['speaker'] = first.get('text', ''), first.get('speaker', '')
+
+
+def jump_to_card(project, node_id, line=0):
+    """讓播放器直接從 node_id（的第 line 句）開始：設 start、關標題畫面、補上延續下來的狀態。"""
     p = copy.deepcopy(project)
     hit = next(((b, n) for b, n in all_nodes(p) if n['id'] == node_id), None)
     if not hit:
@@ -174,6 +192,7 @@ def jump_to_card(project, node_id):
         owns = _owns_stage(d) or (bool(lines) and _owns_stage(lines[0]))
         if d.get('type') == 'dialogue' and state.get('stage') and not owns:
             d.update(state['stage'])
+    start_at_line(d, line)
     for _, n in all_nodes(p):
         (n.get('data') or {}).pop('start', None)
     d['start'] = True

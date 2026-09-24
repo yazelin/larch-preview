@@ -9,6 +9,7 @@ let stream = null;        // 分頁擷取串流，整個工作階段共用
 let captureDenied = false;
 let shot = null;          // 這次回饋的截圖 data URL
 let paused = [];          // 開面板時暫停的 <audio>/<video>
+let trail = [];           // 走過的位置 {nodeId, lineIndex}，按 ← 回上一張卡時用
 
 const api = async (path, body) => (await fetch(path, body === undefined ? {} : {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -58,16 +59,17 @@ async function poll() {
     if (!s.error && last) {
       if (s.mtime !== last.mtime) {
         const cur = follow(here(), s.card);
-        if (cur && cur.nodeId !== s.card) {
-          await api('/api/lp/card', { card: cur.nodeId });
-          s.card = cur.nodeId;
+        if (cur && (cur.nodeId !== s.card || cur.lineIndex !== s.line)) {   // 改檔重整後停在同一句
+          await api('/api/lp/card', { card: cur.nodeId, line: cur.lineIndex });
+          s.card = cur.nodeId; s.line = cur.lineIndex;
         }
         reloadPlayer();
-      } else if (s.card !== last.card) {
+      } else if (s.card !== last.card || s.line !== last.line) {
         reloadPlayer();
       }
     }
     if (!s.error) last = s;
+    remember();
   } catch { /* 伺服器關了：保持畫面 */ }
   setTimeout(poll, 1000);
 }
@@ -201,7 +203,40 @@ async function submit() {
   closePanel();
 }
 
+function remember() {
+  const cur = follow(here(), last?.card);
+  const top = trail[trail.length - 1];
+  if (cur && !(top && top.nodeId === cur.nodeId && top.lineIndex === cur.lineIndex)) trail = [...trail.slice(-200), cur];
+}
+
+// 播放器沒有「回上一句」：同一張卡就從上一句重播，已經在第一句就回上一張卡的最後一句
+async function back() {
+  remember();
+  const cur = follow(here(), last?.card);
+  if (!cur) return;
+  let to = null;
+  if (cur.lineIndex > 0) to = { card: cur.nodeId, line: cur.lineIndex - 1 };
+  else {
+    // 走過的紀錄優先（有分支時才回得到真的走過的那張）；沒有紀錄（例如直接跳卡進來）就照連線往回找
+    const edge = (project.boards || []).flatMap(bd => bd.edges || []).find(e => e.target === cur.nodeId);
+    const prev = [...trail].reverse().find(t => t.nodeId !== cur.nodeId) || (edge && { nodeId: edge.source });
+    if (!prev) return;
+    const n = lines(project).filter(l => l.nodeId === prev.nodeId).length;
+    to = { card: prev.nodeId, line: Math.max(0, n - 1) };
+    trail = trail.slice(0, trail.lastIndexOf(prev) + 1);
+  }
+  await api('/api/lp/card', to);
+}
+
 function onKey(e) {
+  if (e.key === 'ArrowLeft' && !dialog.open && !(e.ctrlKey || e.metaKey || e.altKey)
+      && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')
+      && player.contentDocument?.querySelector('.vn2-text')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    back();
+    return;
+  }
   if (e.key !== 'f' && e.key !== 'F') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;

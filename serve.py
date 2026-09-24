@@ -32,6 +32,7 @@ class Preview:
         self.path = os.path.abspath(project_path)
         self.dir = os.path.dirname(self.path)
         self.card = None
+        self.line = 0          # 從那張卡的第幾句開始（按 ← 回上一句用）
         self.notice = None
         self.lock = threading.Lock()
 
@@ -44,26 +45,27 @@ class Preview:
         if self.card and not any(n['id'] == self.card for _, n in rewrite.all_nodes(project)):
             # agent 把這張卡拆掉或改名了：退回從頭播，不要把畫面卡在錯誤訊息
             self.notice = f'原本那張卡（{self.card}）不見了，改成從頭播。'
-            self.card = None
+            self.card, self.line = None, 0
         if self.card:
-            project, board, reachable = rewrite.jump_to_card(project, self.card)
+            project, board, reachable = rewrite.jump_to_card(project, self.card, self.line)
         return rewrite.wrap_market(rewrite.localize_urls(project), board), reachable
 
     def state(self):
-        s = {'mtime': None, 'card': self.card, 'error': None, 'reachable': True, 'notice': None}
+        s = {'mtime': None, 'card': self.card, 'line': self.line, 'error': None, 'reachable': True, 'notice': None}
         try:
             s['mtime'] = os.stat(self.path).st_mtime
             _, s['reachable'] = self.market()
         except Exception as e:   # 專案壞成什麼樣子都要回得出一句話，不能讓連線斷掉
             s['error'] = describe(e)
-        s['card'], s['notice'] = self.card, self.notice
+        s['card'], s['line'], s['notice'] = self.card, self.line, self.notice
         return s
 
-    def set_card(self, card):
-        """設定下次從哪張卡開始；卡不存在就回錯誤訊息、不改。"""
+    def set_card(self, card, line=0):
+        """設定下次從哪張卡（第幾句）開始；卡不存在就回錯誤訊息、不改。"""
         if card and not any(n['id'] == card for _, n in rewrite.all_nodes(self.load())):
             return f'找不到卡片 {card}'
         self.card, self.notice = card or None, None
+        self.line = max(0, int(line or 0)) if card else 0
         return None
 
 
@@ -154,7 +156,8 @@ def make_server(preview, port, vendor=VENDOR):
             try:
                 if path == '/api/lp/card':
                     with preview.lock:
-                        err = preview.set_card(self.body().get('card'))
+                        b = self.body()
+                        err = preview.set_card(b.get('card'), b.get('line', 0))
                     return self.send(200, {**preview.state(), **({'error': err} if err else {})})
                 if path == '/api/lp/feedback':
                     b = self.body()

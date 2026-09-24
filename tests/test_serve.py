@@ -69,6 +69,12 @@ class Serve(unittest.TestCase):
         self.assertEqual(self.status_of('/api/emojis'), 404)   # 回 {} 會讓播放器以為已登入、有存檔
         self.assertEqual(self.post('/api/presence/beat', {}), {})
 
+    def test_card_jump_to_line(self):
+        s = self.post('/api/lp/card', {'card': 'd2', 'line': 1})
+        self.assertEqual((s['card'], s['line']), ('d2', 1))
+        s = self.post('/api/lp/card', {'card': None, 'line': 3})
+        self.assertEqual((s['card'], s['line']), (None, 0))
+
     def test_card_jump(self):
         s = self.post('/api/lp/card', {'card': 'd2'})
         self.assertEqual((s['card'], s['reachable'], s['error']), ('d2', True, None))

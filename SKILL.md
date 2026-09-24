@@ -48,6 +48,7 @@ python3 ~/larch-preview/serve.py --project <專案id>         # 抓自己線上�
 - 左上角「回饋」或按 **F**。每次打開預覽頁，**第一次**會跳出「分享這個分頁」的授權，按分享才會附截圖。之後都不用再按。
 - 要全螢幕請按 **F11**。播放器自己的「全螢幕」鈕在預覽裡不作用，這是刻意的：它會蓋掉回饋鈕。
 - 面板的「從這張卡開始」會跳過標題直接播那張卡，並補上前面延續下來的背景、BGM、立繪。**變數不會補**，條件分支在跳卡模式下可能跟實際路線不同。
+- 按 **←** 回上一句（播放器本身沒有這個功能）：同一張卡就從上一句重播，已經在第一句就回上一張卡的最後一句（照走過的紀錄，沒有紀錄就照連線往回找）。是用跳卡做的，背景、BGM、立繪會補，**變數不會倒回去**。
 
 ## 讀回饋、修、標記完成
 
@@ -77,7 +78,7 @@ python3 -m lp.feedback done <專案資料夾> <id> "改了什麼"        # 修�
 截圖授權要真人按，agent 自己看畫面走 Playwright 或 chrome-devtools MCP，直接開 `http://127.0.0.1:8790/`：
 - 對話在 iframe `#player` 裡：講者 `.vn2-nameplate b`、內文 `.vn2-text`、對話框 `.vn2-box`。
 - **點對話框會翻頁**，要把焦點移進播放器用 `#player` 的 `focus()`，不要用點的。
-- 要跳到某張卡：`curl -X POST -H 'Content-Type: application/json' -d '{"card":"<nodeId>"}' http://127.0.0.1:8790/api/lp/card`（`null` 回到從頭播）。
+- 要跳到某張卡：`curl -X POST -H 'Content-Type: application/json' -d '{"card":"<nodeId>","line":0}' http://127.0.0.1:8790/api/lp/card`（`null` 回到從頭播）。
 - 完整範例：`~/larch-preview/smoke.mjs`。
 
 ## 做不到的事
