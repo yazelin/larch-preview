@@ -23,7 +23,7 @@ jobs:
       - id: sync
         run: python3 sync.py ${{ inputs.force && '--force' || '' }}
       - if: steps.sync.outputs.changed == 'true'
-        run: xvfb-run -a node smoke.mjs
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" node smoke.mjs
         env:
           CHROME: /usr/bin/google-chrome
       - if: steps.sync.outputs.changed == 'true'

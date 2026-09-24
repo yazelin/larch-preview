@@ -44,6 +44,13 @@ try {
   if (!await until('歡迎來到示範專案。', 1000)) await fail('點對話框翻不到第二句');
   step('點對話框會前進');
 
+  const edit = f => { const p = JSON.parse(readFileSync(pj, 'utf-8')); f(p); writeFileSync(pj, JSON.stringify(p)); };
+  edit(p => { p.boards[0].nodes[1].data.dialogueLines[0].text = '歡迎改過了。'; });
+  if (!await until('歡迎改過了。')) await fail('從頭播放中改檔，沒有自動重整停在 d1');
+  const st = await (await page.request.get(BASE + '/api/lp/state')).json();
+  if (st.card !== 'd1') await fail(`改檔後應該記住 d1，實際是 ${st.card}`);
+  step('從頭播放中改檔，自動重整停在 d1');
+
   await page.request.post(BASE + '/api/lp/card', { data: { card: 'd2' } });
   if (!await until('這裡就是終點。')) await fail('跳卡之後沒出現 d2 的台詞');
   const bg = await page.frame({ url: /play\/market/ }).evaluate(() =>

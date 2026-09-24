@@ -101,5 +101,47 @@ class Serve(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.tmp, 'proj', e['screenshot'])))
         self.assertEqual([r['id'] for r in json.loads(self.get('/api/lp/feedback')[2])], [e['id']])
 
+    def raw(self, path, data=None, headers=None):
+        req = urllib.request.Request(self.base + path, data, headers or {})
+        try:
+            with urllib.request.urlopen(req) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+
+    def test_missing_card_falls_back_to_start_with_notice(self):
+        self.post('/api/lp/card', {'card': 'd2'})
+        p = json.load(open(self.pj, encoding='utf-8'))
+        p['boards'][0]['nodes'][3]['id'] = 'd2-renamed'
+        p['boards'][0]['edges'][2]['target'] = 'd2-renamed'
+        json.dump(p, open(self.pj, 'w', encoding='utf-8'))
+        s = json.loads(self.get('/api/lp/state')[2])
+        self.assertIsNone(s['error'])
+        self.assertIsNone(s['card'])
+        self.assertEqual(s['notice'], '原本那張卡（d2）不見了，改成從頭播。')
+        w = json.loads(self.get('/api/marketplace/local')[2])
+        self.assertTrue(w['project']['settings']['titleScreenEnabled'])
+        self.assertEqual(self.post('/api/lp/card', {'card': 'nope'})['error'], '找不到卡片 nope')
+
+    def test_structurally_wrong_json_reports_error(self):
+        for bad in ([], {'boards': {'x': 1}}, {'boards': ['x']}):
+            json.dump(bad, open(self.pj, 'w'))
+            s = json.loads(self.get('/api/lp/state')[2])
+            self.assertTrue(s['error'], bad)
+            self.assertEqual(self.status_of('/api/marketplace/local'), 500)
+
+    def test_cross_origin_and_non_json_posts_rejected(self):
+        body = json.dumps({'entry': {'note': 'x'}}).encode()
+        self.assertEqual(self.raw('/api/lp/feedback', body, {'Content-Type': 'text/plain'}), 403)
+        self.assertEqual(self.raw('/api/lp/feedback', body, {'Content-Type': 'application/json', 'Origin': 'https://evil.example'}), 403)
+        self.assertEqual(self.raw('/api/lp/card', json.dumps({'card': 'd2'}).encode(), {'Content-Type': 'text/plain'}), 403)
+        self.assertEqual(json.loads(self.get('/api/lp/feedback')[2]), [])
+        self.assertEqual(self.raw('/api/lp/feedback', body, {'Content-Type': 'application/json', 'Origin': self.base}), 200)
+
+    def test_foreign_host_rejected(self):
+        self.assertEqual(self.raw('/api/lp/project', headers={'Host': 'evil.example'}), 403)
+        self.assertEqual(self.raw('/files/bg-a.svg', headers={'Host': f'rebind.evil:{self.srv.server_address[1]}'}), 403)
+        self.assertEqual(self.raw('/api/lp/project', headers={'Host': f'localhost:{self.srv.server_address[1]}'}), 200)
+
 if __name__ == '__main__':
     unittest.main()

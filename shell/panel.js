@@ -1,4 +1,4 @@
-import { locate, lines } from './match.js';
+import { follow, locate, lines } from './match.js';
 
 const $ = s => document.querySelector(s);
 const player = $('#player');
@@ -51,12 +51,13 @@ async function poll() {
   try {
     const s = await api('/api/lp/state');
     if (s.error) banner(`專案 JSON 有錯，畫面停在上一版：${s.error}`, true);
+    else if (s.notice) banner(s.notice);
     else if (s.card && !s.reachable) banner('這張卡從起點走不到，背景與音樂可能與實際不同。');
     else if (s.card) banner('跳卡模式：變數與條件分支不會照實際路線。');
     else banner('');
     if (!s.error && last) {
       if (s.mtime !== last.mtime) {
-        const [cur] = here();
+        const cur = follow(here(), s.card);
         if (cur && cur.nodeId !== s.card) {
           await api('/api/lp/card', { card: cur.nodeId });
           s.card = cur.nodeId;

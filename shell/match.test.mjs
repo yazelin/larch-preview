@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { locate, lines, norm } from './match.js';
+import { follow, locate, lines, norm } from './match.js';
 
 const demo = JSON.parse(readFileSync(new URL('../fixtures/demo/project.json', import.meta.url)));
 
@@ -34,4 +34,15 @@ test('同一句出現在兩張卡，用講者分', () => {
 test('找不到回空陣列', () => {
   assert.deepEqual(locate(demo, '', ''), []);
   assert.deepEqual(locate(demo, '嚮導', '不存在的句子'), []);
+});
+
+test('重載時優先停在目前那張卡，重複台詞不會跳去別張', () => {
+  const p = structuredClone(demo);
+  p.boards[0].nodes[1].data.dialogueLines[0].text = '……';
+  p.boards[0].nodes[3].data.dialogueLines[0] = { id: 'l0', speaker: '嚮導', text: '……' };
+  const cands = locate(p, '嚮導', '……');
+  assert.deepEqual(cands.map(c => c.nodeId), ['d1', 'd2']);
+  assert.equal(follow(cands, 'd2').nodeId, 'd2');
+  assert.equal(follow(cands, null).nodeId, 'd1');
+  assert.equal(follow([], 'd2'), undefined);
 });

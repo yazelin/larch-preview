@@ -25,3 +25,8 @@ export function locate(project, speaker, shown) {
   const same = pool.filter(l => l.speaker === speaker);
   return same.length ? same : pool;
 }
+
+// 自動重載要停在哪張卡：候選裡有目前那張就用它，「……」這種重複台詞才不會跳到別張。
+export function follow(cands, card) {
+  return cands.find(c => c.nodeId === card) || cands[0];
+}

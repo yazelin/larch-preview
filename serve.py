@@ -32,6 +32,7 @@ class Preview:
         self.path = os.path.abspath(project_path)
         self.dir = os.path.dirname(self.path)
         self.card = None
+        self.notice = None
         self.lock = threading.Lock()
 
     def load(self):
@@ -40,17 +41,39 @@ class Preview:
 
     def market(self):
         project, board, reachable = self.load(), None, True
+        if self.card and not any(n['id'] == self.card for _, n in rewrite.all_nodes(project)):
+            # agent 把這張卡拆掉或改名了：退回從頭播，不要把畫面卡在錯誤訊息
+            self.notice = f'原本那張卡（{self.card}）不見了，改成從頭播。'
+            self.card = None
         if self.card:
             project, board, reachable = rewrite.jump_to_card(project, self.card)
         return rewrite.wrap_market(rewrite.localize_urls(project), board), reachable
 
     def state(self):
-        s = {'mtime': os.stat(self.path).st_mtime, 'card': self.card, 'error': None, 'reachable': True}
+        s = {'mtime': None, 'card': self.card, 'error': None, 'reachable': True, 'notice': None}
         try:
+            s['mtime'] = os.stat(self.path).st_mtime
             _, s['reachable'] = self.market()
-        except (ValueError, KeyError) as e:   # JSONDecodeError 是 ValueError，訊息帶行號
-            s['error'] = str(e)
+        except Exception as e:   # 專案壞成什麼樣子都要回得出一句話，不能讓連線斷掉
+            s['error'] = describe(e)
+        s['card'], s['notice'] = self.card, self.notice
         return s
+
+    def set_card(self, card):
+        """設定下次從哪張卡開始；卡不存在就回錯誤訊息、不改。"""
+        if card and not any(n['id'] == card for _, n in rewrite.all_nodes(self.load())):
+            return f'找不到卡片 {card}'
+        self.card, self.notice = card or None, None
+        return None
+
+
+def describe(e):
+    """給人看的錯誤訊息。JSONDecodeError 是 ValueError，訊息本身帶行號。"""
+    if isinstance(e, KeyError) and e.args:
+        return str(e.args[0])
+    if isinstance(e, ValueError):
+        return str(e)
+    return f'專案格式不對（{type(e).__name__}: {e}）'
 
 
 def safe_join(base, rel):
@@ -83,7 +106,20 @@ def make_server(preview, port, vendor=VENDOR):
                 raise ValueError('內容太大')
             return json.loads(self.rfile.read(n) or b'{}')
 
+        def host_ok(self):
+            port = self.server.server_address[1]
+            return self.headers.get('Host') in (f'127.0.0.1:{port}', f'localhost:{port}')
+
+        def origin_ok(self):
+            """擋掉別的網站對本機 API 發的寫入（回饋檔是 agent 會照著做的指令來源）。"""
+            origin = self.headers.get('Origin')
+            port = self.server.server_address[1]
+            return (self.headers.get('Content-Type') or '').startswith('application/json') and \
+                origin in (None, f'http://127.0.0.1:{port}', f'http://localhost:{port}')
+
         def do_GET(self):
+            if not self.host_ok():
+                return self.send(403, {'error': 'host not allowed'})
             path = unquote(urlparse(self.path).path)
             try:
                 if path.startswith('/api/marketplace/local'):
@@ -94,8 +130,8 @@ def make_server(preview, port, vendor=VENDOR):
                     return self.send(200, preview.load())
                 if path == '/api/lp/feedback':
                     return self.send(200, feedback.read_all(os.path.join(preview.dir, 'feedback')))
-            except (ValueError, KeyError) as e:
-                return self.send(500, {'error': str(e)})
+            except Exception as e:
+                return self.send(500, {'error': describe(e)})
             if path.startswith('/api/'):
                 return self.send(200, {})
             if path.startswith('/files/'):
@@ -112,11 +148,13 @@ def make_server(preview, port, vendor=VENDOR):
 
         def do_POST(self):
             path = urlparse(self.path).path
+            if not self.host_ok() or (path.startswith('/api/lp/') and not self.origin_ok()):
+                return self.send(403, {'error': 'forbidden'})
             try:
                 if path == '/api/lp/card':
                     with preview.lock:
-                        preview.card = self.body().get('card') or None
-                    return self.send(200, preview.state())
+                        err = preview.set_card(self.body().get('card'))
+                    return self.send(200, {**preview.state(), **({'error': err} if err else {})})
                 if path == '/api/lp/feedback':
                     b = self.body()
                     if not isinstance(b.get('entry'), dict):

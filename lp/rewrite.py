@@ -105,6 +105,14 @@ def path_to(project, node_id):
     return None
 
 
+_STAGE = ('stage', 'characterLayers', 'character', 'characterPosition')
+
+
+def _owns_stage(layer):
+    """播放器判斷「這張卡／這一句自己有舞台」的條件：有 stage、有 characterLayers、或有舊欄位 character。"""
+    return 'stage' in layer or bool(layer.get('characterLayers')) or bool(layer.get('character'))
+
+
 def carried_state(nodes):
     """照播放器的延續規則，累積走過這些卡之後還留在畫面上的背景、BGM、舞台。"""
     state = {}
@@ -115,11 +123,10 @@ def carried_state(nodes):
                 state['background'] = layer['background']
             if layer.get('bgm'):
                 state['bgm'] = {k: layer[k] for k in _BGM if k in layer}
-            if layer.get('bgmAction') == 'stop':
+            if layer.get('bgmAction') in ('stop', 'fadeOut'):
                 state.pop('bgm', None)
-        for k in ('stage', 'characterLayers'):
-            if k in d:
-                state[k] = d[k]
+            if _owns_stage(layer):
+                state['stage'] = {k: layer[k] for k in _STAGE if k in layer}
     return state
 
 
@@ -138,10 +145,10 @@ def jump_to_card(project, node_id):
             d['background'] = state['background']
         if state.get('bgm') and not d.get('bgm'):
             d.update(state['bgm'])
-        if d.get('type') == 'dialogue':
-            for k in ('stage', 'characterLayers'):
-                if k in state and k not in d:
-                    d[k] = state[k]
+        lines = d.get('dialogueLines') or []
+        owns = _owns_stage(d) or (bool(lines) and _owns_stage(lines[0]))
+        if d.get('type') == 'dialogue' and state.get('stage') and not owns:
+            d.update(state['stage'])
     for _, n in all_nodes(p):
         (n.get('data') or {}).pop('start', None)
     d['start'] = True

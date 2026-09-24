@@ -36,14 +36,20 @@ def version(html):
     return m.group(1)
 
 
+# Vite 打包出來的檔名尾巴是 8 碼 hash；這種檔抓不到一定是真的缺，不是字串碰巧長得像檔名
+HASHED = re.compile(r'-[A-Za-z0-9_\-]{8}\.(?:js|mjs|css|woff2?)$')
+
+
 def get(url):
     for attempt in range(3):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.read()
-        except urllib.error.HTTPError:
-            raise
+        except urllib.error.HTTPError as e:
+            if e.code != 429 and e.code < 500 or attempt == 2:
+                raise
+            time.sleep(5 * (attempt + 1))
         except OSError:
             if attempt == 2:
                 raise
@@ -56,6 +62,7 @@ def crawl(dest, html):
     with open(os.path.join(dest, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html)
     queue, seen, missing, roots = extract_refs(html), set(), [], set(extract_root_refs(html))
+    fatal = []
     while queue:
         name = queue.pop()
         if name in seen:
@@ -64,7 +71,7 @@ def crawl(dest, html):
         try:
             data = get(f'{BASE}/assets/{name}')
         except urllib.error.HTTPError as e:
-            missing.append(f'{name}（{e.code}）')
+            (fatal if e.code != 404 or HASHED.search(name) else missing).append(f'{name}（{e.code}）')
             continue
         with open(os.path.join(dest, 'assets', name), 'wb') as f:
             f.write(data)
@@ -81,6 +88,8 @@ def crawl(dest, html):
             continue
         with open(os.path.join(dest, 'root', name), 'wb') as f:
             f.write(data)
+    if fatal:
+        raise RuntimeError('這些檔案抓不到，快取不完整，不更新：' + '、'.join(fatal))
     for s in SFX:
         with open(os.path.join(dest, 'sfx', s + '.mp3'), 'wb') as f:
             f.write(get(f'{BASE}/sfx/{s}.mp3'))

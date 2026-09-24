@@ -117,5 +117,50 @@ class Jump(unittest.TestCase):
         with self.assertRaises(KeyError):
             rewrite.jump_to_card(demo(), 'nope')
 
+class JumpStageOwnership(unittest.TestCase):
+    def proj(self, target):
+        return {'activeBoardId': 'b', 'settings': {}, 'boards': [{'id': 'b', 'nodes': [
+            card('a', type='dialogue', start=True, stage={'actors': [{'id': 'OLD'}]}, dialogueLines=[{'text': '一'}]),
+            card('t', **target),
+        ], 'edges': [{'source': 'a', 'target': 't'}]}]}
+
+    def target(self, q):
+        return next(n for _, n in rewrite.all_nodes(q) if n['id'] == 't')['data']
+
+    def test_character_layers_only_target_keeps_its_own(self):
+        q, _, _ = rewrite.jump_to_card(self.proj(dict(type='dialogue', characterLayers=[{'url': 'new.png'}], dialogueLines=[{'text': '二'}])), 't')
+        self.assertNotIn('stage', self.target(q))
+
+    def test_legacy_character_target_keeps_its_own(self):
+        q, _, _ = rewrite.jump_to_card(self.proj(dict(type='dialogue', character='c.png', dialogueLines=[{'text': '二'}])), 't')
+        self.assertNotIn('stage', self.target(q))
+
+    def test_line_zero_stage_counts_as_owned(self):
+        q, _, _ = rewrite.jump_to_card(self.proj(dict(type='dialogue', dialogueLines=[{'text': '二', 'stage': {'actors': []}}])), 't')
+        self.assertNotIn('stage', self.target(q))
+
+    def test_bare_target_gets_whole_carried_stage(self):
+        q, _, _ = rewrite.jump_to_card(self.proj(dict(type='dialogue', dialogueLines=[{'text': '二'}])), 't')
+        self.assertEqual(self.target(q)['stage'], {'actors': [{'id': 'OLD'}]})
+
+    def test_carry_follows_line_level_stage_and_legacy_character(self):
+        p = self.proj(dict(type='dialogue', dialogueLines=[{'text': '三'}]))
+        p['boards'][0]['nodes'][0]['data']['dialogueLines'].append({'text': '一b', 'stage': {'actors': [{'id': 'LINE'}]}})
+        q, _, _ = rewrite.jump_to_card(p, 't')
+        self.assertEqual(self.target(q)['stage'], {'actors': [{'id': 'LINE'}]})
+        p = self.proj(dict(type='dialogue', dialogueLines=[{'text': '三'}]))
+        d = p['boards'][0]['nodes'][0]['data']; d.pop('stage'); d['character'] = 'legacy.png'; d['characterPosition'] = 'left'
+        q, _, _ = rewrite.jump_to_card(p, 't')
+        t = self.target(q)
+        self.assertNotIn('stage', t)
+        self.assertEqual((t['character'], t['characterPosition']), ('legacy.png', 'left'))
+
+    def test_fade_out_ends_carried_bgm(self):
+        p = self.proj(dict(type='dialogue', dialogueLines=[{'text': '二'}]))
+        d = p['boards'][0]['nodes'][0]['data']; d['bgm'] = 'm.mp3'
+        d['dialogueLines'].append({'text': '一b', 'bgmAction': 'fadeOut'})
+        q, _, _ = rewrite.jump_to_card(p, 't')
+        self.assertNotIn('bgm', self.target(q))
+
 if __name__ == '__main__':
     unittest.main()
