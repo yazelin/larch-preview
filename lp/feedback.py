@@ -53,6 +53,27 @@ def append(fb_dir, entry, png=None):
     return row
 
 
+def archive(fb_dir, fid, resolution):
+    """標成已處理並搬進 archive/（紀錄與截圖都搬），面板只剩待處理的。封存的紀錄還查得到。"""
+    now = datetime.datetime.now(TZ).isoformat(timespec='seconds')
+    with _locked(fb_dir):
+        rows = read_all(fb_dir)
+        hit = next((r for r in rows if r['id'] == fid), None)
+        if not hit:
+            raise KeyError(f'找不到回饋 {fid}')
+        hit.update(status='done', resolution=resolution, doneAt=now)
+        adir = os.path.join(fb_dir, 'archive'); os.makedirs(adir, exist_ok=True)
+        if hit.get('screenshot'):
+            name = os.path.basename(hit['screenshot'])
+            if os.path.exists(os.path.join(fb_dir, name)):
+                os.replace(os.path.join(fb_dir, name), os.path.join(adir, name))
+            hit['screenshot'] = f'feedback/archive/{name}'
+        with open(os.path.join(adir, 'archive.jsonl'), 'a', encoding='utf-8') as f:
+            f.write(json.dumps(hit, ensure_ascii=False) + '\n')
+        _write(fb_dir, [r for r in rows if r['id'] != fid])
+    return hit
+
+
 def set_status(fb_dir, fid, status, resolution):
     with _locked(fb_dir):
         rows = read_all(fb_dir)
@@ -70,10 +91,15 @@ def main(argv):
             if r['status'] == 'open':
                 print(json.dumps(r, ensure_ascii=False))
     elif len(argv) == 4 and argv[0] == 'done':
-        set_status(os.path.join(argv[1], 'feedback'), argv[2], 'done', argv[3])
+        archive(os.path.join(argv[1], 'feedback'), argv[2], argv[3])
+    elif len(argv) == 2 and argv[0] == 'archive-done':   # 舊版留下、已處理但還沒搬走的一次清掉
+        fb = os.path.join(argv[1], 'feedback')
+        for r in [r for r in read_all(fb) if r['status'] == 'done']:
+            archive(fb, r['id'], r.get('resolution'))
     else:
         sys.exit('用法：python3 -m lp.feedback list <專案資料夾>\n'
-                 '　　　python3 -m lp.feedback done <專案資料夾> <id> "<處理說明>"')
+                 '　　　python3 -m lp.feedback done <專案資料夾> <id> "<處理說明>"   （標成已處理並搬進 feedback/archive/）\n'
+                 '　　　python3 -m lp.feedback archive-done <專案資料夾>   （把以前標過已處理的一次搬走）')
 
 
 if __name__ == '__main__':

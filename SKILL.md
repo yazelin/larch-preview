@@ -55,7 +55,8 @@ python3 ~/larch-preview/serve.py --project <專案id>         # 抓自己線上�
 
 ```bash
 python3 -m lp.feedback list <專案資料夾>                      # 在 ~/larch-preview 底下跑；一行一筆 open 的 JSON
-python3 -m lp.feedback done <專案資料夾> <id> "改了什麼"        # 修完標記，面板上會顯示「已處理」
+python3 -m lp.feedback done <專案資料夾> <id> "改了什麼"        # 修完標記，搬進 feedback/archive/，面板上就不再出現
+python3 -m lp.feedback archive-done <專案資料夾>               # 舊版留下、已處理但還沒搬走的一次清掉
 ```
 
 （不在 `~/larch-preview` 底下的話：`PYTHONPATH=~/larch-preview python3 -m lp.feedback …`）

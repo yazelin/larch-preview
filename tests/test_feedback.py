@@ -34,6 +34,17 @@ class Feedback(unittest.TestCase):
         with open(os.path.join(self.dir, 'feedback.jsonl'), encoding='utf-8') as f:
             self.assertIn('質地唸錯', f.read())
 
+    def test_archive_moves_row_and_screenshot(self):
+        a = feedback.append(self.dir, {'note': '修好了'}, b'\x89PNG')
+        b = feedback.append(self.dir, {'note': '還沒'})
+        done = feedback.archive(self.dir, a['id'], '改了台詞')
+        self.assertEqual([r['id'] for r in feedback.read_all(self.dir)], [b['id']])     # 面板只剩待處理
+        self.assertEqual((done['status'], done['resolution']), ('done', '改了台詞'))
+        self.assertTrue(os.path.exists(os.path.join(self.dir, 'archive', a['id'] + '.png')))
+        self.assertFalse(os.path.exists(os.path.join(self.dir, a['id'] + '.png')))
+        with open(os.path.join(self.dir, 'archive', 'archive.jsonl'), encoding='utf-8') as f:
+            self.assertEqual(json.loads(f.readline())['screenshot'], f"feedback/archive/{a['id']}.png")
+
     def test_set_status_keeps_other_lines(self):
         a = feedback.append(self.dir, {'note': 'a'})
         b = feedback.append(self.dir, {'note': 'b'})
