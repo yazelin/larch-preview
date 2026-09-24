@@ -1,0 +1,36 @@
+{
+  "id": "project-demo", "name": "示範：兩個房間", "description": "larch-preview 的自製示範專案。",
+  "schemaVersion": 1, "locale": "zh-Hant",
+  "languages": [{"code": "zh-Hant", "label": "繁體中文", "voiceMode": "shared"}],
+  "activeBoardId": "board-main", "variables": [], "media": [],
+  "characters": [
+    {"id": "character-narrator", "name": "旁白", "role": "旁白"},
+    {"id": "character-guide", "name": "嚮導", "role": "嚮導"}
+  ],
+  "settings": {"titleScreenEnabled": true, "stageFit": "auto", "keepActorsInFrame": false,
+               "resolution": {"width": 1920, "height": 1080}, "cgGalleryEnabled": false},
+  "boards": [{
+    "id": "board-main", "mode": "story", "name": "主線",
+    "nodes": [
+      {"id": "s1", "type": "story", "position": {"x": 0, "y": 0},
+       "data": {"type": "scene", "start": true, "title": "第一個房間", "text": "你走進一個綠色的房間。",
+                "background": "bg-a.svg", "transition": "fade", "transitionMs": 300}},
+      {"id": "d1", "type": "story", "position": {"x": 300, "y": 0},
+       "data": {"type": "dialogue", "title": "嚮導開口", "speaker": "嚮導", "characterId": "character-guide", "text": "歡迎來到示範專案。",
+                "dialogueLines": [
+                  {"id": "l0", "speaker": "嚮導", "text": "歡迎來到示範專案。"},
+                  {"id": "l1", "speaker": "旁白", "text": "嚮導指了指另一扇門。"}]}},
+      {"id": "s2", "type": "story", "position": {"x": 600, "y": 0},
+       "data": {"type": "scene", "title": "第二個房間", "text": "門後是一個紫色的房間。",
+                "background": "bg-b.svg", "transition": "fade", "transitionMs": 300}},
+      {"id": "d2", "type": "story", "position": {"x": 900, "y": 0},
+       "data": {"type": "dialogue", "title": "結尾", "speaker": "嚮導", "characterId": "character-guide", "text": "這裡就是終點。",
+                "dialogueLines": [{"id": "l0", "speaker": "嚮導", "text": "這裡就是終點。"}]}}
+    ],
+    "edges": [
+      {"id": "e1", "source": "s1", "target": "d1"},
+      {"id": "e2", "source": "d1", "target": "s2"},
+      {"id": "e3", "source": "s2", "target": "d2"}
+    ]
+  }]
+}
