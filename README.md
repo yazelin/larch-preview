@@ -19,6 +19,17 @@ python3 serve.py --project <專案id>         # 用 ~/.config/larch/key 抓自�
 - 右下角「回饋」或按 `F`。第一次會請你允許分享這個分頁，之後每筆回饋都自動附截圖。
 - 回饋面板裡「從這張卡開始」會跳過標題畫面、直接從那張卡播，並補上前面延續下來的背景、BGM、立繪。**變數不會補**，條件分支在跳卡模式下可能跟實際路線不同。
 
+## 讓其他 AI 用
+
+repo 根目錄的 `SKILL.md` 就是 skill 本體。symlink 到各 agent 的 skill 目錄：
+
+```bash
+ln -s ~/larch-preview ~/.claude/skills/larch-preview     # Claude Code
+ln -s ~/larch-preview ~/.agents/skills/larch-preview     # Codex、agy 等讀 ~/.agents/skills 的 agent
+```
+
+換機器時先 `git clone` 這個私有 repo，再做上面兩行。
+
 ## 給 agent：修回饋的迴圈
 
 1. 開著 `python3 serve.py <project.json>`，請使用者看。
