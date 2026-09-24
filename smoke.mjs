@@ -18,12 +18,21 @@ await new Promise((ok, bad) => {
   server.on('exit', c => bad(new Error(`serve.py 結束了（${c}）`)));
 });
 
+const trouble = [];   // 失敗時印出來：console 錯誤、頁面例外、4xx/5xx
 const browser = await chromium.launch({ executablePath: CHROME, headless: false, args: ['--auto-accept-this-tab-capture'] });
-const fail = async msg => { console.error('FAIL', msg); await browser.close(); server.kill(); rmSync(dir, { recursive: true }); process.exit(1); };
+let page;
+const fail = async msg => {
+  console.error('FAIL', msg);
+  for (const t of trouble.slice(-30)) console.error('  ', t);
+  await page?.screenshot({ path: 'smoke-fail.png' }).catch(() => {});
+  await browser.close(); server.kill(); rmSync(dir, { recursive: true }); process.exit(1); };
 const step = msg => console.log('ok  ', msg);
 
 try {
-  const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+  page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: process.env.SMOKE_LOCALE || 'zh-TW' })).newPage();
+  page.on('console', m => m.type() === 'error' && trouble.push('console: ' + m.text()));
+  page.on('pageerror', e => trouble.push('pageerror: ' + e.message));
+  page.on('response', r => r.status() >= 400 && trouble.push(`${r.status()} ${r.url()}`));
   await page.goto(BASE + '/');
   const frame = page.frameLocator('#player');
   const text = frame.locator('.vn2-text');

@@ -26,6 +26,12 @@ jobs:
         run: xvfb-run -a -s "-screen 0 1920x1080x24" node smoke.mjs
         env:
           CHROME: /usr/bin/google-chrome
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-fail
+          path: smoke-fail.png
+          if-no-files-found: ignore
       - if: steps.sync.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
