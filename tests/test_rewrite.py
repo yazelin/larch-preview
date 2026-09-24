@@ -50,5 +50,72 @@ class Market(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '專案沒有任何版子'):
             rewrite.wrap_market({'id': 'p', 'name': 'x'})
 
+def card(nid, **data):
+    return {'id': nid, 'type': 'story', 'position': {'x': 0, 'y': 0}, 'data': data}
+
+class Jump(unittest.TestCase):
+    def test_jump_carries_background_from_previous_scene(self):
+        p, board, ok = rewrite.jump_to_card(demo(), 'd2')
+        self.assertTrue(ok)
+        self.assertEqual(board, 'board-main')
+        nodes = dict((n['id'], n) for _, n in rewrite.all_nodes(p))
+        self.assertEqual(nodes['d2']['data']['background'], 'bg-b.svg')
+        self.assertEqual([i for i, n in nodes.items() if n['data'].get('start')], ['d2'])
+        self.assertFalse(p['settings']['titleScreenEnabled'])
+
+    def test_jump_does_not_mutate_input(self):
+        p = demo(); before = copy.deepcopy(p)
+        rewrite.jump_to_card(p, 'd2')
+        self.assertEqual(p, before)
+
+    def test_bgm_line_level_and_stop(self):
+        p = {'activeBoardId': 'b', 'settings': {}, 'boards': [{'id': 'b', 'nodes': [
+            card('a', type='scene', start=True, background='x.png', bgm='m1.mp3', bgmVolume=0.3),
+            card('b1', type='dialogue', stage={'actors': [{'url': 'mori.png'}]},
+                 dialogueLines=[{'text': '一'}, {'text': '二', 'background': 'y.png', 'bgm': 'm2.mp3'}]),
+            card('c', type='dialogue', dialogueLines=[{'text': '三'}]),
+            card('d', type='dialogue', bgmAction='stop', dialogueLines=[{'text': '四'}]),
+            card('e', type='dialogue', dialogueLines=[{'text': '五'}]),
+        ], 'edges': [{'source': 'a', 'target': 'b1'}, {'source': 'b1', 'target': 'c'},
+                     {'source': 'c', 'target': 'd'}, {'source': 'd', 'target': 'e'}]}]}
+        q, _, _ = rewrite.jump_to_card(p, 'c')
+        c = next(n for _, n in rewrite.all_nodes(q) if n['id'] == 'c')['data']
+        self.assertEqual(c['background'], 'y.png')
+        self.assertEqual(c['bgm'], 'm2.mp3')
+        self.assertEqual(c['stage'], {'actors': [{'url': 'mori.png'}]})
+        q, _, _ = rewrite.jump_to_card(p, 'e')
+        e = next(n for _, n in rewrite.all_nodes(q) if n['id'] == 'e')['data']
+        self.assertNotIn('bgm', e)
+
+    def test_own_values_win(self):
+        p = demo(); p['boards'][0]['nodes'][3]['data']['background'] = 'own.png'
+        q, _, _ = rewrite.jump_to_card(p, 'd2')
+        self.assertEqual(q['boards'][0]['nodes'][3]['data']['background'], 'own.png')
+
+    def test_scene_target_gets_no_stage(self):
+        p = demo(); p['boards'][0]['nodes'][1]['data']['stage'] = {'actors': [{'url': 'g.png'}]}
+        q, _, _ = rewrite.jump_to_card(p, 's2')
+        self.assertNotIn('stage', q['boards'][0]['nodes'][2]['data'])
+
+    def test_board_jump(self):
+        p = demo()
+        p['boards'][0]['nodes'].append(card('j', type='boardJump', jumpBoardId='b2', jumpNodeId='x1'))
+        p['boards'][0]['edges'].append({'source': 'd2', 'target': 'j'})
+        p['boards'].append({'id': 'b2', 'nodes': [card('x1', type='dialogue', dialogueLines=[{'text': '二章'}])], 'edges': []})
+        q, board, ok = rewrite.jump_to_card(p, 'x1')
+        self.assertEqual((board, ok), ('b2', True))
+        self.assertEqual(q['boards'][1]['nodes'][0]['data']['background'], 'bg-b.svg')
+        self.assertEqual(rewrite.wrap_market(q, board)['startBoardId'], 'b2')
+
+    def test_unreachable_card_still_starts(self):
+        p = demo(); p['boards'][0]['nodes'].append(card('island', type='dialogue', text='孤島'))
+        q, _, ok = rewrite.jump_to_card(p, 'island')
+        self.assertFalse(ok)
+        self.assertTrue(q['boards'][0]['nodes'][-1]['data']['start'])
+
+    def test_unknown_card(self):
+        with self.assertRaises(KeyError):
+            rewrite.jump_to_card(demo(), 'nope')
+
 if __name__ == '__main__':
     unittest.main()
