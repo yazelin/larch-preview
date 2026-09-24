@@ -13,6 +13,23 @@ repo 在 `~/larch-preview`（私有，前端快取不可公開散布）。
 - 寫完或改完劇本，要讓使用者看成品：**先用這個，不要為了看一眼就推版子或發佈**。
 - 使用者說「這句唸錯」「這裡立繪不對」：請他在預覽上按 F 留回饋，比口頭描述準（會帶卡片 id、第幾句、截圖）。
 
+## 不需要 Larch 專案
+
+只要一個專案 JSON 檔就能跑，**不需要 Larch 帳號、金鑰或線上專案**。最少只要 `boards`：
+
+```json
+{"boards": [{"id": "main",
+  "nodes": [
+    {"id": "a", "data": {"type": "dialogue", "start": true, "speaker": "小明", "text": "你好。"}},
+    {"id": "b", "data": {"type": "dialogue", "speaker": "小華", "text": "第二句。"}}],
+  "edges": [{"source": "a", "target": "b"}]}]}
+```
+
+其他平台建專案時本來就有的欄位（`settings`、`characters`、`media`、`variables`、`languages`、名稱、卡片的 `position`、邊的 `id`）由 serve.py 自動補上；有寫就用你寫的。
+沒補的話播放器會直接壞掉（沒有 `settings` 會壞、卡片沒有 `position` 也會壞），所以別自己刪那段補值。
+卡片的 `data` 怎麼寫（`dialogueLines`、`stage.actors`、`background`、`bgm`、選擇卡、場景卡…）照 larch-vn skill 的欄位說明，跟推上平台的格式一樣，之後可以原樣推上去。
+範本：`~/larch-preview/fixtures/minimal/project.json`（最小）、`fixtures/demo/project.json`（有場景卡與本機背景圖）。
+
 ## 開預覽
 
 ```bash

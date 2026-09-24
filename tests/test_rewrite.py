@@ -162,5 +162,34 @@ class JumpStageOwnership(unittest.TestCase):
         q, _, _ = rewrite.jump_to_card(p, 't')
         self.assertNotIn('bgm', self.target(q))
 
+class Defaults(unittest.TestCase):
+    MINI = {'boards': [{'id': 'main', 'nodes': [
+        {'id': 'a', 'data': {'type': 'dialogue', 'start': True, 'speaker': '小明', 'text': '你好'}}],
+        'edges': [{'source': 'a', 'target': 'a'}]}]}
+
+    def test_fills_what_the_player_reads(self):
+        p = rewrite.fill_defaults(self.MINI)
+        self.assertEqual(p['settings'], {})
+        for k in ('characters', 'media', 'variables'):
+            self.assertEqual(p[k], [])
+        self.assertEqual(p['languages'][0]['code'], 'zh-Hant')
+        self.assertTrue(p['id'] and p['name'])
+        n = p['boards'][0]['nodes'][0]
+        self.assertEqual((n['type'], n['position']), ('story', {'x': 0, 'y': 0}))
+        self.assertEqual(p['boards'][0]['edges'][0]['id'], 'edge-0')
+        self.assertEqual(p['boards'][0]['name'], 'main')
+
+    def test_keeps_what_is_there(self):
+        p = rewrite.fill_defaults(demo())
+        self.assertEqual(p, rewrite.fill_defaults(p))
+        self.assertEqual(p['name'], '示範：兩個房間')
+        self.assertEqual(p['boards'][0]['nodes'][1]['position'], {'x': 300, 'y': 0})
+        self.assertTrue(p['settings']['titleScreenEnabled'])
+
+    def test_does_not_mutate(self):
+        before = copy.deepcopy(self.MINI)
+        rewrite.fill_defaults(self.MINI)
+        self.assertEqual(self.MINI, before)
+
 if __name__ == '__main__':
     unittest.main()

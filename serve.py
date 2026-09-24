@@ -37,7 +37,7 @@ class Preview:
 
     def load(self):
         with open(self.path, encoding='utf-8') as f:
-            return rewrite.unwrap(json.load(f))
+            return rewrite.fill_defaults(rewrite.unwrap(json.load(f)))
 
     def market(self):
         project, board, reachable = self.load(), None, True

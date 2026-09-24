@@ -24,6 +24,31 @@ def localize_urls(value):
     return value
 
 
+def fill_defaults(project):
+    """補上 Larch 平台建專案時本來就會有的欄位。agent 從零手寫的 JSON 常常只有 boards，
+    播放器缺這些會直接壞掉（實測：沒有 settings 讀不到 projectThumbnail、卡片沒有 position 讀不到 x）。"""
+    p = copy.deepcopy(project)
+    p.setdefault('id', 'local-project')
+    p.setdefault('name', '未命名專案')
+    p.setdefault('description', '')
+    p.setdefault('schemaVersion', 1)
+    p.setdefault('locale', 'zh-Hant')
+    p.setdefault('languages', [{'code': 'zh-Hant', 'label': '繁體中文', 'voiceMode': 'shared'}])
+    for k in ('characters', 'media', 'variables'):
+        p.setdefault(k, [])
+    p.setdefault('settings', {})
+    for b in p.get('boards') or []:
+        b.setdefault('name', b.get('id', ''))
+        b.setdefault('mode', 'story')
+        for i, n in enumerate(b.setdefault('nodes', [])):
+            n.setdefault('type', 'story')
+            n.setdefault('position', {'x': 300 * i, 'y': 0})
+            n.setdefault('data', {})
+        for i, e in enumerate(b.setdefault('edges', [])):
+            e.setdefault('id', f'edge-{i}')
+    return p
+
+
 def all_nodes(project):
     for b in project.get('boards') or []:
         for n in b.get('nodes') or []:

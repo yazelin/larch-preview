@@ -1,0 +1,10 @@
+{
+  "boards": [{
+    "id": "main",
+    "nodes": [
+      {"id": "a", "data": {"type": "dialogue", "start": true, "speaker": "小明", "text": "你好，這是最精簡的專案。"}},
+      {"id": "b", "data": {"type": "dialogue", "speaker": "小華", "text": "第二句。"}}
+    ],
+    "edges": [{"source": "a", "target": "b"}]
+  }]
+}

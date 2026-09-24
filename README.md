@@ -13,6 +13,7 @@ python3 serve.py --project <專案id>         # 用 ~/.config/larch/key 抓自�
 ```
 
 - 專案 JSON 吃三種形狀：裸專案、agent API 的 `{"project": …}`、市集回應。
+- **不需要 Larch 專案**：最少只要 `boards`（見 `fixtures/minimal/project.json`），`settings`、`characters`、卡片座標這類平台本來就有的欄位會自動補上。
 - 素材可以寫相對路徑（`bg/night.webp`、`voice/l0.mp3`），會從專案 JSON 所在資料夾讀。檔名不要有空白；`..` 一律擋掉。
 - 改了專案 JSON，畫面一秒內自動重整並停在原本那張卡。那張卡被拆掉或改名的話，會提示並改成從頭播。
 - 伺服器只聽 `127.0.0.1`，而且只收同源的寫入，其他網站寫不進回饋檔。

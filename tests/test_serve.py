@@ -2,6 +2,7 @@ import base64, json, os, shutil, tempfile, threading, time, unittest, urllib.req
 from urllib.parse import quote
 import serve
 
+Defaults_MINI = {'boards': [{'id': 'main', 'nodes': [{'id': 'a', 'data': {'type': 'dialogue', 'start': True, 'text': '你好'}}], 'edges': []}]}
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class Serve(unittest.TestCase):
@@ -142,6 +143,12 @@ class Serve(unittest.TestCase):
         self.assertEqual(self.raw('/api/lp/project', headers={'Host': 'evil.example'}), 403)
         self.assertEqual(self.raw('/files/bg-a.svg', headers={'Host': f'rebind.evil:{self.srv.server_address[1]}'}), 403)
         self.assertEqual(self.raw('/api/lp/project', headers={'Host': f'localhost:{self.srv.server_address[1]}'}), 200)
+
+    def test_minimal_project_gets_defaults(self):
+        json.dump(Defaults_MINI, open(self.pj, 'w', encoding='utf-8'))
+        w = json.loads(self.get('/api/marketplace/local')[2])
+        self.assertEqual(w['project']['settings'], {})
+        self.assertEqual(w['project']['nodes'][0]['position'], {'x': 0, 'y': 0})
 
 if __name__ == '__main__':
     unittest.main()
