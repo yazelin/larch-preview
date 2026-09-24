@@ -12,7 +12,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 #banner.error { border-color: var(--danger); }
 #fb-open { position: fixed; left: 16px; top: 16px; z-index: 10; padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
-body.grabbing #fb-open, body.grabbing #banner { visibility: hidden; }
+#jump { position: fixed; left: 96px; top: 16px; z-index: 10; width: auto; max-width: min(360px, calc(100% - 112px));
+  padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(20,20,20,.8); }
+body.grabbing #fb-open, body.grabbing #banner, body.grabbing #jump { visibility: hidden; }
 dialog#fb { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 dialog#fb::backdrop { background: rgba(0,0,0,.35); }

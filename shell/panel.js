@@ -9,15 +9,43 @@ let stream = null;        // 分頁擷取串流，整個工作階段共用
 let captureDenied = false;
 let shot = null;          // 這次回饋的截圖 data URL
 let paused = [];          // 開面板時暫停的 <audio>/<video>
-let trail = [];           // 走過的位置 {nodeId, lineIndex}，按 ← 回上一張卡時用
+let trail = [];
+let urlError = null;      // 網址帶了找不到的卡片：常駐顯示，直到下一次跳卡           // 走過的位置 {nodeId, lineIndex}，按 ← 回上一張卡時用
 
 const api = async (path, body) => (await fetch(path, body === undefined ? {} : {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 })).json();
 
+// 跳到某張卡的第幾句，並把位置寫進網址（?card=&line=），重新整理或存書籤都會回到這裡
+async function go(card, line = 0) {
+  urlError = null;
+  const u = new URL(location.href);
+  if (card) { u.searchParams.set('card', card); u.searchParams.set('line', line); }
+  else { u.searchParams.delete('card'); u.searchParams.delete('line'); }
+  history.replaceState(null, '', u);
+  return api('/api/lp/card', { card: card || null, line });
+}
+
+function fillJump() {
+  const sel = $('#jump');
+  const keep = sel.value;
+  sel.replaceChildren(new Option('跳到…（從頭播）', ''));
+  for (const b of project?.boards || []) {
+    const g = document.createElement('optgroup');
+    g.label = b.name || b.id;
+    for (const n of b.nodes || []) {
+      const d = n.data || {};
+      if (d.type === 'group') continue;
+      g.append(new Option(d.title || n.id, n.id));
+    }
+    sel.append(g);
+  }
+  sel.value = keep;
+}
+
 async function refreshProject() {
   const r = await fetch('/api/lp/project');
-  if (r.ok) project = await r.json();
+  if (r.ok) { project = await r.json(); fillJump(); }
 }
 
 function banner(text, isError = false) {
@@ -51,7 +79,8 @@ function reloadPlayer() {
 async function poll() {
   try {
     const s = await api('/api/lp/state');
-    if (s.error) banner(`專案 JSON 有錯，畫面停在上一版：${s.error}`, true);
+    if (urlError) banner(urlError, true);
+    else if (s.error) banner(`專案 JSON 有錯，畫面停在上一版：${s.error}`, true);
     else if (s.notice) banner(s.notice);
     else if (s.card && !s.reachable) banner('這張卡從起點走不到，背景與音樂可能與實際不同。');
     else if (s.card) banner('跳卡模式：變數與條件分支不會照實際路線。');
@@ -60,7 +89,7 @@ async function poll() {
       if (s.mtime !== last.mtime) {
         const cur = follow(here(), s.card);
         if (cur && (cur.nodeId !== s.card || cur.lineIndex !== s.line)) {   // 改檔重整後停在同一句
-          await api('/api/lp/card', { card: cur.nodeId, line: cur.lineIndex });
+          await go(cur.nodeId, cur.lineIndex);
           s.card = cur.nodeId; s.line = cur.lineIndex;
         }
         reloadPlayer();
@@ -69,6 +98,7 @@ async function poll() {
       }
     }
     if (!s.error) last = s;
+    if (document.activeElement !== $('#jump')) $('#jump').value = s.card || '';
     remember();
   } catch { /* 伺服器關了：保持畫面 */ }
   setTimeout(poll, 1000);
@@ -225,7 +255,7 @@ async function back() {
     to = { card: prev.nodeId, line: Math.max(0, n - 1) };
     trail = trail.slice(0, trail.lastIndexOf(prev) + 1);
   }
-  await api('/api/lp/card', to);
+  await go(to.card, to.line);
 }
 
 function onKey(e) {
@@ -255,11 +285,19 @@ $('#fb-submit').addEventListener('click', submit);
 $('#fb-at').addEventListener('change', onAtChange);
 $('#fb-here').addEventListener('click', async () => {
   const at = selectedAt();
-  if (at.nodeId) { await api('/api/lp/card', { card: at.nodeId }); closePanel(); }
+  if (at.nodeId) { await go(at.nodeId); closePanel(); }
 });
-$('#fb-restart').addEventListener('click', async () => { await api('/api/lp/card', { card: null }); closePanel(); });
+$('#fb-restart').addEventListener('click', async () => { await go(null); closePanel(); });
+$('#jump').addEventListener('change', e => { go(e.target.value || null); e.target.blur(); player.focus(); });
 $('#fb-regrant').addEventListener('click', async () => { captureDenied = false; dialog.close(); shot = await grab(); dialog.showModal(); shotStatus(); });
 dialog.addEventListener('cancel', e => { e.preventDefault(); closePanel(); });
 
 await refreshProject();
+{ // 網址帶 ?card=<卡片id>&line=<第幾句> 就直接從那裡開始
+  const q = new URLSearchParams(location.search);
+  if (q.get('card')) {
+    const r = await go(q.get('card'), Number(q.get('line')) || 0);
+    if (r.error) { await go(null); urlError = `網址裡的卡片：${r.error}，改成從頭播。`; }
+  }
+}
 poll();
