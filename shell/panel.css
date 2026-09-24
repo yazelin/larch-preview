@@ -1,0 +1,35 @@
+:root {
+  --bg: #111316; --panel: #1b1e23; --line: #33373e; --text: #e8e6e1; --muted: #9a9890;
+  --accent: #d9b56b; --danger: #e07a6b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font: 14px/1.6 system-ui, "Noto Sans TC", sans-serif; }
+#player { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+#banner { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px);
+  padding: 6px 12px; border-radius: 6px; background: rgba(20,20,20,.85); border: 1px solid var(--accent);
+  z-index: 10; pointer-events: none; }
+#banner.error { border-color: var(--danger); }
+#fb-open { position: fixed; right: 16px; bottom: 72px; z-index: 10; padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
+body.grabbing #fb-open, body.grabbing #banner { visibility: hidden; }
+dialog#fb { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+dialog#fb::backdrop { background: rgba(0,0,0,.35); }
+#fb-form { display: grid; gap: 10px; }
+#fb-form header, #fb-form footer, .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#fb-form footer { justify-content: flex-end; }
+#fb-shot-status { color: var(--muted); font-size: 12px; margin-left: auto; }
+label { display: grid; gap: 4px; }
+#fb-staging { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+#fb-staging label { display: flex; gap: 4px; align-items: center; }
+details { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+details > * + * { margin-top: 6px; }
+summary { cursor: pointer; color: var(--accent); }
+input, select, textarea, button { font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+button { width: auto; cursor: pointer; }
+#fb-submit { border-color: var(--accent); color: var(--accent); }
+#fb-history { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
+#fb-history .done { color: var(--text); }
+#fb-error { color: var(--danger); margin: 0; }

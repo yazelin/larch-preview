@@ -1,5 +1,79 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head><meta charset="utf-8"><title>Larch 預覽</title></head>
-<body><iframe id="player" src="/play/market/local"></iframe></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Larch 預覽</title>
+  <link rel="stylesheet" href="/shell/panel.css">
+</head>
+<body>
+  <iframe id="player" src="/play/market/local" allow="autoplay; fullscreen"></iframe>
+  <div id="banner" hidden></div>
+  <button id="fb-open" type="button" title="回饋（F）">回饋</button>
+
+  <dialog id="fb">
+    <form method="dialog" id="fb-form">
+      <header>
+        <strong>回饋</strong>
+        <span id="fb-shot-status"></span>
+        <button type="button" id="fb-regrant" hidden>重新授權截圖</button>
+      </header>
+
+      <label>位置
+        <select id="fb-at"></select>
+      </label>
+      <div class="row">
+        <button type="button" id="fb-here">從這張卡開始</button>
+        <button type="button" id="fb-restart">從頭播</button>
+      </div>
+
+      <details open>
+        <summary>台詞</summary>
+        <textarea id="fb-text" rows="3"></textarea>
+      </details>
+
+      <details>
+        <summary>語音</summary>
+        <select id="fb-voice-kind">
+          <option value="">（沒有問題）</option>
+          <option value="misread">唸錯字</option>
+          <option value="tone">語氣不對</option>
+          <option value="redo">重配</option>
+          <option value="other">其他</option>
+        </select>
+        <input id="fb-voice-chars" placeholder="哪個字（例：質地）">
+        <input id="fb-voice-should" placeholder="應該怎麼唸（例：ㄓˊ ㄉㄧˋ）">
+        <input id="fb-voice-note" placeholder="備註">
+      </details>
+
+      <details>
+        <summary>演出</summary>
+        <div id="fb-staging">
+          <label><input type="checkbox" value="actor">立繪</label>
+          <label><input type="checkbox" value="expression">表情</label>
+          <label><input type="checkbox" value="background">背景</label>
+          <label><input type="checkbox" value="bgm">BGM</label>
+          <label><input type="checkbox" value="effect">特效</label>
+          <label><input type="checkbox" value="transition">轉場</label>
+          <label><input type="checkbox" value="other">其他</label>
+        </div>
+        <textarea id="fb-staging-note" rows="2" placeholder="哪裡不對"></textarea>
+      </details>
+
+      <label>其他備註
+        <textarea id="fb-note" rows="2"></textarea>
+      </label>
+
+      <ul id="fb-history"></ul>
+      <p id="fb-error" hidden></p>
+
+      <footer>
+        <button type="button" id="fb-cancel">取消</button>
+        <button type="button" id="fb-submit">送出</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script type="module" src="/shell/panel.js"></script>
+</body>
 </html>

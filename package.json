@@ -1,0 +1,12 @@
+{
+  "name": "larch-preview",
+  "scripts": {
+    "test": "python3 -m unittest discover -s tests && node --test shell/*.test.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}
