@@ -1,0 +1,1 @@
+import{j as s}from"./react-core-CuKebU_E.js";import{S as o}from"./SelectMenu-Cl8qkkNu.js";function m({className:t="",...e}){return s.jsx(o,{...e,className:`studio-select ${t}`.trim()})}export{m as S};
