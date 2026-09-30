@@ -41,7 +41,9 @@ python3 ~/larch-preview/serve.py --project <專案id>         # 抓自己線上�
 - 專案 JSON 吃三種形狀：裸專案、agent API 的 `{"project": …}`、市集回應。
 - 素材可以寫相對路徑（`bg/night.webp`、`voice/l0.mp3`），從 JSON 所在資料夾讀，還沒上傳也能看。檔名不要有空白。
 - **serve.py 要在背景一直開著**，把網址給使用者。之後你改 JSON，畫面一秒內自動重整並停在原本那張卡，不必叫使用者重新整理。
-- port 被佔用會直接報錯結束：先確認是不是自己之前開的沒關，關掉再開，或加 `--port`。舊的 server 跑的是舊程式，對著它驗收等於沒驗。
+- port 被佔用會自動往後找空的，**網址以 serve.py 印出來的那行為準**。常有好幾條工作線同時開預覽，
+  所以腳本要從輸出讀網址，或用 `--port 0` 讓系統挑。**關 server 只關自己啟動的那個 PID**，
+  不要用「誰佔著這個 port 就關誰」，那可能是別條線的預覽。改了 serve.py 之後要重開，舊的 server 跑的是舊程式。
 
 ## 請使用者留回饋時要講的話
 
@@ -82,6 +84,12 @@ python3 -m lp.feedback archive-done <專案資料夾>               # 舊版留�
 - **點對話框會翻頁**，要把焦點移進播放器用 `#player` 的 `focus()`，不要用點的。
 - 要跳到某張卡：`curl -X POST -H 'Content-Type: application/json' -d '{"card":"<nodeId>","line":0}' http://127.0.0.1:8790/api/lp/card`（`null` 回到從頭播）。
 - 完整範例：`~/larch-preview/smoke.mjs`。
+
+## RPG 地圖卡
+
+Larch 2.0.0 的 RPG 地圖與戰鬥卡（`larch-rpg-system`）播得動：圖塊、角色、像素字型、血條、任務欄都在。
+回饋面板判斷不出 RPG 對話框裡是哪一句，請使用者在「位置」手動選卡片、細節寫在備註。
+RPG 地圖之間靠地圖事件跳轉、不是白板連線，所以跳到地圖卡時不會出現「從起點走不到」的提示。
 
 ## 做不到的事
 

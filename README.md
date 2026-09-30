@@ -71,6 +71,10 @@ npm test             # Python unittest + node:test
 node smoke.mjs       # 真 Chrome，會開一個視窗
 ```
 
+## 多條工作線同時開
+
+port 被佔用會自動往後找空的，網址以 serve.py 印出來的為準；腳本裡用 `--port 0` 讓系統挑最安全（smoke 就是這樣）。
+
 ## 做不到的事
 
 - 平台自己的 AI 卡（AI 對話、AI 導演）、存檔同步、彈幕、登入相關功能：那些要打 larch.ink 的 API，本機一律回空。
