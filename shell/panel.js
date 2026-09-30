@@ -17,7 +17,20 @@ const api = async (path, body) => (await fetch(path, body === undefined ? {} : {
 })).json();
 
 // 跳到某張卡的第幾句，並把位置寫進網址（?card=&line=），重新整理或存書籤都會回到這裡
+// 白板：官方的 /preview/<token>?view=board，serve.py 回 /api/preview/local。放在同一個 iframe，改檔自動重整照樣有效
+const PLAY_URL = '/play/market/local';
+const BOARD_URL = '/preview/local?view=board';
+function setView(board) {
+  const u = new URL(location.href);
+  board ? u.searchParams.set('view', 'board') : u.searchParams.delete('view');
+  history.replaceState(null, '', u);
+  $('#view-toggle').textContent = board ? '播放' : '白板';
+  if (player.getAttribute('src') !== (board ? BOARD_URL : PLAY_URL)) player.src = board ? BOARD_URL : PLAY_URL;
+}
+const inBoard = () => new URL(location.href).searchParams.get('view') === 'board';
+
 async function go(card, line = 0) {
+  if (inBoard()) setView(false);   // 從選單跳卡是要播那張卡，不是停在白板
   urlError = null;
   const u = new URL(location.href);
   if (card) { u.searchParams.set('card', card); u.searchParams.set('line', line); }
@@ -268,6 +281,13 @@ function onKey(e) {
     back();
     return;
   }
+  if ((e.key === 'b' || e.key === 'B') && !dialog.open && !(e.ctrlKey || e.metaKey || e.altKey)
+      && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    setView(!inBoard());
+    return;
+  }
   if (e.key !== 'f' && e.key !== 'F') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
@@ -289,6 +309,8 @@ $('#fb-here').addEventListener('click', async () => {
   if (at.nodeId) { await go(at.nodeId); closePanel(); }
 });
 $('#fb-restart').addEventListener('click', async () => { await go(null); closePanel(); });
+$('#view-toggle').addEventListener('click', () => setView(!inBoard()));
+if (inBoard()) setView(true);
 $('#jump').addEventListener('change', e => { go(e.target.value || null); e.target.blur(); player.focus(); });
 $('#fb-regrant').addEventListener('click', async () => { captureDenied = false; dialog.close(); shot = await grab(); dialog.showModal(); shotStatus(); });
 dialog.addEventListener('cancel', e => { e.preventDefault(); closePanel(); });

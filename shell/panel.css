@@ -11,11 +11,13 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
   z-index: 10; pointer-events: none; }
 #banner.error { border-color: var(--danger); }
 /* 放上方中央：左上角是 RPG 地圖的血條與任務欄、右上角是播放器的關閉鈕 */
-#fb-open { position: fixed; right: calc(50% + 4px); top: 12px; z-index: 10; padding: 8px 14px; border-radius: 999px;
+#controls { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 10;
+  display: flex; gap: 8px; align-items: center; max-width: calc(100% - 32px); }
+#fb-open, #view-toggle { padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
-#jump { position: fixed; left: calc(50% + 4px); top: 12px; z-index: 10; width: auto; max-width: min(320px, calc(50% - 20px));
-  padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(20,20,20,.8); }
-body.grabbing #fb-open, body.grabbing #banner, body.grabbing #jump { visibility: hidden; }
+#jump { width: auto; min-width: 0; max-width: 320px; padding: 7px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: rgba(20,20,20,.8); }
+body.grabbing #controls, body.grabbing #banner { visibility: hidden; }
 dialog#fb { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 dialog#fb::backdrop { background: rgba(0,0,0,.35); }

@@ -85,6 +85,13 @@ python3 -m lp.feedback archive-done <專案資料夾>               # 舊版留�
 - 要跳到某張卡：`curl -X POST -H 'Content-Type: application/json' -d '{"card":"<nodeId>","line":0}' http://127.0.0.1:8790/api/lp/card`（`null` 回到從頭播）。
 - 完整範例：`~/larch-preview/smoke.mjs`。
 
+## 白板
+
+上方的「白板」鈕（或按 **B**）切到 Larch 官方的白板檢視：整張版子的卡片、連線、分支、場景縮圖，不用登入。
+網址帶 `?view=board` 直接開白板。卡片上的 ▶ 從那張卡開始試播，右上「預覽播放」從標題開始；
+改了專案 JSON 白板也會自動重整。要給使用者看結構、檢查接線，丟這個比丟 JSON 清楚。
+從選單跳卡會自動切回播放。
+
 ## RPG 地圖卡
 
 Larch 2.0.0 的 RPG 地圖與戰鬥卡（`larch-rpg-system`）播得動：圖塊、角色、像素字型、血條、任務欄都在。

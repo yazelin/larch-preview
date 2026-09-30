@@ -17,7 +17,8 @@ python3 serve.py --project <專案id>         # 用 ~/.config/larch/key 抓自�
 - 素材可以寫相對路徑（`bg/night.webp`、`voice/l0.mp3`），會從專案 JSON 所在資料夾讀。檔名不要有空白；`..` 一律擋掉。
 - 改了專案 JSON，畫面一秒內自動重整並停在原本那張卡。那張卡被拆掉或改名的話，會提示並改成從頭播。
 - 伺服器只聽 `127.0.0.1`，而且只收同源的寫入，其他網站寫不進回饋檔。
-- 右下角「回饋」或按 `F`。第一次會請你允許分享這個分頁，之後每筆回饋都自動附截圖。
+- 上方「白板」或按 `B`：切到 Larch 官方的白板檢視（不用登入），網址帶 `?view=board` 直接開。
+- 上方「回饋」或按 `F`。第一次會請你允許分享這個分頁，之後每筆回饋都自動附截圖。
 - 回饋面板裡「從這張卡開始」會跳過標題畫面、直接從那張卡播，並補上前面延續下來的背景、BGM、立繪。**變數不會補**，條件分支在跳卡模式下可能跟實際路線不同。
 - 按 **←** 回上一句（播放器本身沒有這個功能）：同一張卡就從上一句重播，已經在第一句就回上一張卡的最後一句（照走過的紀錄，沒有紀錄就照連線往回找）。是用跳卡做的，背景、BGM、立繪會補，**變數不會倒回去**。
 - 左上角「跳到…」選單可以直接跳到任何一張卡；網址也吃參數：`http://127.0.0.1:8790/?card=<卡片id>&line=<第幾句>`，跳卡時網址會跟著更新，存書籤或重新整理都停在那裡。卡片 id 不存在會常駐提示並從頭播。
@@ -61,7 +62,7 @@ ln -s ~/larch-preview ~/.agents/skills/larch-preview     # Codex、agy 等讀 ~/
 
 ## Larch 前端快取
 
-`.github/workflows/sync.yml` 每天台灣時間 06:17 跑 `sync.py`：larch.ink 首頁的 `index-*.js` 換了就重抓整份前端、根目錄的 logo 與內建音效，跑過 `smoke.mjs` 才 commit。失敗會開一張 `sync-failure` issue，舊快取照用。平常 `git pull` 就拿得到 Action 同步好的版本；要立刻更新就自己跑 `python3 sync.py`。
+`.github/workflows/sync.yml` 每天台灣時間 06:17 跑 `sync.py`：larch.ink 首頁的 `index-*.js` 換了就重抓整份前端、根目錄的 logo 與內建音效，跑過 `smoke.mjs` 才 commit。失敗會開一張 `sync-failure` issue，舊快取照用。平常 `git pull` 就拿得到 Action 同步好的版本；要立刻更新就自己跑 `python3 sync.py`。白板壞了但播放器正常時，快取照樣更新，另外開一張 `board-broken` issue。
 
 ## 測試
 

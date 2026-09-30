@@ -196,5 +196,23 @@ class Serve(unittest.TestCase):
         finally:
             srv.server_close()
 
+    def test_board_view_snapshot(self):
+        d = json.loads(self.get('/api/preview/local')[2])
+        self.assertEqual((d['permission'], d['projectId'], d['comments']), ('view', 'project-demo', []))
+        snap = d['snapshot']
+        self.assertEqual([n['id'] for n in snap['nodes']], ['s1', 'd1', 's2', 'd2'])   # 白板讀最外層這份，缺了會一片空白
+        self.assertEqual(len(snap['edges']), 3)
+        self.assertEqual(snap['nodes'][0]['data']['background'], '/files/bg-a.svg')
+        self.assertTrue(snap['nodes'][0]['data']['start'])
+        self.post('/api/lp/card', {'card': 'd2'})                                      # 跳卡不影響白板：白板顯示專案本來的樣子
+        snap = json.loads(self.get('/api/preview/local')[2])['snapshot']
+        self.assertTrue(snap['nodes'][0]['data']['start'])
+        self.assertTrue(snap['settings']['titleScreenEnabled'])
+
+    def test_board_view_of_minimal_project(self):
+        json.dump(Defaults_MINI, open(self.pj, 'w', encoding='utf-8'))
+        snap = json.loads(self.get('/api/preview/local')[2])['snapshot']
+        self.assertEqual(snap['nodes'][0]['position'], {'x': 0, 'y': 0})
+
 if __name__ == '__main__':
     unittest.main()

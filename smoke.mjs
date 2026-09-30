@@ -99,7 +99,31 @@ try {
   await fail(e.stack || String(e));
 }
 
+// 白板：壞了只回結束碼 2（播放器沒事，快取照樣更新，另外開 issue），不擋每日同步
+let boardBroken = null;
+try {
+  await page.click('#view-toggle');
+  const board = page.frameLocator('#player');
+  await board.getByText('嚮導開口').waitFor({ timeout: 20000 });
+  const cards = await board.locator('.share-node').count();
+  if (cards !== 4) throw new Error(`白板上應該有 4 張卡，實際 ${cards} 張`);
+  step('白板畫出 4 張卡');
+  const q = JSON.parse(readFileSync(pj, 'utf-8'));
+  q.boards[0].nodes[3].data.title = '結尾改過了';
+  writeFileSync(pj, JSON.stringify(q));
+  await board.getByText('結尾改過了').waitFor({ timeout: 15000 });
+  step('白板上改檔也會自動重整');
+  await board.getByRole('button', { name: '試播《嚮導開口》' }).click();
+  await board.locator('.vn2-text').getByText('歡迎改過了。').waitFor({ timeout: 15000 });   // 前面步驟改過這句
+  step('白板卡片的 ▶ 從那張卡開始播');
+} catch (e) {
+  boardBroken = e.message.split('\n')[0];
+  console.error('WARN 白板壞了（播放器正常）：' + boardBroken);
+  await page.screenshot({ path: 'smoke-fail.png' }).catch(() => {});
+}
+
 await browser.close();
 server.kill();
 rmSync(dir, { recursive: true });
+if (boardBroken) process.exit(2);
 console.log('smoke 全部通過');

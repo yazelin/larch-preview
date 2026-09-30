@@ -7,6 +7,7 @@
 """
 import argparse
 import base64
+import datetime
 import errno
 import json
 import mimetypes
@@ -51,6 +52,14 @@ class Preview:
         if self.card:
             project, board, reachable = rewrite.jump_to_card(project, self.card, self.line)
         return rewrite.wrap_market(rewrite.localize_urls(project), board), reachable
+
+    def board(self):
+        """官方白板頁（/preview/<token>?view=board）跟伺服器要的 GET /api/preview/<token>。
+        白板顯示專案本來的樣子，不套跳卡；最外層的 nodes/edges 要補，缺了白板一片空白（2026-09-30 實測）。"""
+        snap = rewrite.wrap_market(rewrite.localize_urls(self.load()))['project']
+        return {'id': 'preview-local', 'projectId': snap['id'], 'permission': 'view', 'snapshot': snap,
+                'updatedAt': datetime.datetime.fromtimestamp(os.stat(self.path).st_mtime, datetime.timezone.utc).isoformat(),
+                'expiresAt': '2099-01-01T00:00:00+00:00', 'comments': []}
 
     def state(self):
         s = {'mtime': None, 'card': self.card, 'line': self.line, 'error': None, 'reachable': True, 'notice': None}
@@ -141,6 +150,8 @@ def make_server(preview, port, vendor=VENDOR):
             try:
                 if path.startswith('/api/marketplace/local'):
                     return self.send(200, preview.market()[0])
+                if path.startswith('/api/preview/'):
+                    return self.send(200, preview.board())
                 if path == '/api/lp/state':
                     return self.send(200, preview.state())
                 if path == '/api/lp/project':
