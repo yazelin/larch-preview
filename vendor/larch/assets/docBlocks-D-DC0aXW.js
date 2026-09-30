@@ -1,0 +1,1 @@
+let e=0;const o=()=>`b${(e+=1).toString(36)}${Math.random().toString(36).slice(2,8)}`;function s(r,n=700){const t=String(r||"").trim();return!t||t.length>n?"":/^(?:https?:\/\/|\/)/i.test(t)?t:""}export{o as b,s};
