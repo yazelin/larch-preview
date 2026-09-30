@@ -7,14 +7,16 @@
 """
 import argparse
 import base64
+import errno
 import json
 import mimetypes
 import os
+import re
 import sys
 import threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from lp import feedback, rewrite
 
@@ -78,6 +80,19 @@ def describe(e):
     return f'專案格式不對（{type(e).__name__}: {e}）'
 
 
+# /api/media/proxy 只替 Larch 自己的素材網址代抓（RPG 引擎的圖都走這支），其他網址一律拒絕
+MEDIA_HOSTS = re.compile(r'^(pub-[0-9a-f]+\.r2\.dev|larch\.ink|[a-z0-9-]+\.larch\.ink)$')
+_media_cache = {}   # ponytail: 不設上限的記憶體快取，一次預覽一個專案、素材量有限；真的吃太多記憶體再改 LRU
+
+
+def fetch_media(url):
+    if url not in _media_cache:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            _media_cache[url] = (r.read(), r.headers.get('Content-Type') or 'application/octet-stream')
+    return _media_cache[url]
+
+
 def safe_join(base, rel):
     base = os.path.realpath(base)
     full = os.path.realpath(os.path.join(base, rel))
@@ -134,6 +149,8 @@ def make_server(preview, port, vendor=VENDOR):
                     return self.send(200, feedback.read_all(os.path.join(preview.dir, 'feedback')))
             except Exception as e:
                 return self.send(500, {'error': describe(e)})
+            if path == '/api/media/proxy':
+                return self.media_proxy(parse_qs(urlparse(self.path).query).get('url', [''])[0])
             if path.startswith('/api/'):
                 # 不認得的 API 回 404，跟播放器在未登入、離線時看到的一樣；回 {} 會被當成已登入、有存檔
                 return self.send(404, {'error': 'not available offline'})
@@ -148,6 +165,20 @@ def make_server(preview, port, vendor=VENDOR):
             if '.' in os.path.basename(path):   # 根目錄的 logo、favicon
                 return self.send_file(safe_join(os.path.join(vendor, 'root'), path.lstrip('/')))
             return self.send_file(os.path.join(vendor, 'index.html'))   # SPA 萬用路由
+
+        def media_proxy(self, url):
+            if url.startswith('/files/'):
+                return self.send_file(safe_join(preview.dir, url[len('/files/'):]))
+            u = urlparse(url)
+            if u.scheme != 'https' or not MEDIA_HOSTS.match(u.hostname or ''):
+                return self.send(403, {'error': 'only Larch media URLs'})
+            try:
+                data, ctype = fetch_media(url)
+            except urllib.error.HTTPError as e:
+                return self.send(e.code, {'error': str(e)})
+            except OSError as e:
+                return self.send(502, {'error': str(e)})
+            return self.send(200, data, ctype)
 
         def do_POST(self):
             path = urlparse(self.path).path
@@ -174,6 +205,18 @@ def make_server(preview, port, vendor=VENDOR):
             pass
 
     return ThreadingHTTPServer(('127.0.0.1', port), H)
+
+
+def bind(preview, port, tries=20):
+    """port 被別條工作線佔著就往後找空的，回傳 (server, 實際的 port)。"""
+    for p in range(port, port + tries):
+        try:
+            srv = make_server(preview, p)
+            return srv, srv.server_address[1]
+        except OSError as e:
+            if e.errno != errno.EADDRINUSE:
+                raise
+    sys.exit(f'{port}–{port + tries - 1} 都被佔用了，用 --port 指定別的')
 
 
 def fetch(url, key=None):
@@ -210,8 +253,10 @@ def main():
     path = a.project or (a.market and download('market', a.market)) or (a.project_id and download('project', a.project_id))
     if not path:
         ap.error('要給專案 JSON 路徑、--market 或 --project 其中一個')
-    srv = make_server(Preview(path), a.port)
-    print(f'預覽：http://127.0.0.1:{a.port}/　回饋：{os.path.join(os.path.dirname(os.path.abspath(path)), "feedback")}', flush=True)
+    srv, port = bind(Preview(path), a.port)
+    if a.port and port != a.port:
+        print(f'{a.port} 已被佔用，改用 {port}', flush=True)
+    print(f'預覽：http://127.0.0.1:{port}/　回饋：{os.path.join(os.path.dirname(os.path.abspath(path)), "feedback")}', flush=True)
     srv.serve_forever()
 
 

@@ -1,6 +1,8 @@
 import base64, json, os, shutil, tempfile, threading, time, unittest, urllib.request, urllib.error
 from urllib.parse import quote
 import serve
+from unittest import mock
+from urllib.parse import quote as q
 
 Defaults_MINI = {'boards': [{'id': 'main', 'nodes': [{'id': 'a', 'data': {'type': 'dialogue', 'start': True, 'text': '你好'}}], 'edges': []}]}
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -155,6 +157,44 @@ class Serve(unittest.TestCase):
         w = json.loads(self.get('/api/marketplace/local')[2])
         self.assertEqual(w['project']['settings'], {})
         self.assertEqual(w['project']['nodes'][0]['position'], {'x': 0, 'y': 0})
+
+    def test_media_proxy_only_fetches_larch_assets(self):
+        seen = []
+        class R:
+            headers = {'Content-Type': 'image/png'}
+            def read(self): return b'\x89PNGremote'
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+        real = urllib.request.urlopen
+        def urlopen(req, timeout=None):
+            url = getattr(req, 'full_url', req)
+            if url.startswith(self.base):          # 測試自己打本機伺服器的請求照常送出
+                return real(req) if timeout is None else real(req, timeout=timeout)
+            seen.append(url)
+            return R()
+        ok = 'https://pub-4b20b43f5acf4dfaa3f6ab842daa51cf.r2.dev/x/tiles.png'
+        with mock.patch.object(serve.urllib.request, 'urlopen', urlopen):
+            status, ctype, body = self.get('/api/media/proxy?url=' + q(ok, safe=''))
+            self.assertEqual((status, ctype, body), (200, 'image/png', b'\x89PNGremote'))
+            self.assertEqual(self.get('/api/media/proxy?url=' + q('https://larch.ink/plugins/rpg/a.png', safe=''))[0], 200)
+            for bad in ('https://evil.example/a.png', 'http://pub-1.r2.dev/a.png', 'file:///etc/passwd',
+                        'https://pub-1.r2.dev.evil.example/a.png', 'http://127.0.0.1:22/'):
+                self.assertEqual(self.status_of('/api/media/proxy?url=' + q(bad, safe='')), 403, bad)
+        self.assertEqual(seen, [ok, 'https://larch.ink/plugins/rpg/a.png'])
+
+    def test_media_proxy_serves_local_files(self):
+        status, ctype, _ = self.get('/api/media/proxy?url=' + q('/files/bg-a.svg', safe=''))
+        self.assertEqual((status, ctype), (200, 'image/svg+xml'))
+        self.assertEqual(self.status_of('/api/media/proxy?url=' + q('/files/../project.json', safe='')), 404)
+
+    def test_busy_port_moves_to_next(self):
+        used = self.srv.server_address[1]
+        srv, port = serve.bind(serve.Preview(self.pj), used)
+        try:
+            self.assertNotEqual(port, used)
+            self.assertEqual(srv.server_address[1], port)
+        finally:
+            srv.server_close()
 
 if __name__ == '__main__':
     unittest.main()

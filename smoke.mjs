@@ -6,15 +6,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const CHROME = process.env.CHROME || ['/opt/google/chrome/chrome', '/usr/bin/google-chrome'].find(existsSync);
-const PORT = 8799;
-const BASE = `http://127.0.0.1:${PORT}`;
 const dir = mkdtempSync(join(tmpdir(), 'larch-preview-'));
 cpSync('fixtures/demo', dir, { recursive: true });
 const pj = join(dir, 'project.json');
 
-const server = spawn('python3', ['serve.py', pj, '--port', String(PORT)], { stdio: ['ignore', 'pipe', 'inherit'] });
-await new Promise((ok, bad) => {
-  server.stdout.on('data', d => d.toString().includes('預覽：') && ok());
+const server = spawn('python3', ['serve.py', pj, '--port', '0'],   // 0＝讓系統挑空的 port，不會打到別條線開著的預覽
+ { stdio: ['ignore', 'pipe', 'inherit'] });
+const BASE = await new Promise((ok, bad) => {
+  server.stdout.on('data', d => { const m = d.toString().match(/預覽：(http:\/\/127\.0\.0\.1:\d+)/); if (m) ok(m[1]); });
   server.on('exit', c => bad(new Error(`serve.py 結束了（${c}）`)));
 });
 

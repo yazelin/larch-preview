@@ -16,6 +16,13 @@ class Sync(unittest.TestCase):
         text = '<link rel="icon" href="/favicon.png?v=4">' + 'src:"/larch-mark.png",x=`url(/larch-coin.png)`,y="/assets/a.png",z="/api/x.png"'
         self.assertEqual(sync.extract_root_refs(text), ['favicon.png', 'larch-coin.png', 'larch-mark.png'])
 
+    def test_plugin_static_refs(self):
+        text = ('a="/plugins/rpg/ui/fusion-pixel/fusion-pixel-12px-proportional-zh_hant.otf.woff2",'
+                'b=`/plugins/rpg/adventure-pack/cloud-kingdom.m4a`,c="/plugins/rpg/",d="/plugins/../etc/passwd.png"')
+        self.assertEqual(sync.extract_root_refs(text), [
+            'plugins/rpg/adventure-pack/cloud-kingdom.m4a',
+            'plugins/rpg/ui/fusion-pixel/fusion-pixel-12px-proportional-zh_hant.otf.woff2'])
+
     def test_version(self):
         self.assertEqual(sync.version(HTML), 'index-lg9nGv1N.js')
 
@@ -29,7 +36,7 @@ class Crawl(unittest.TestCase):
         def get(url):
             if url in fail:
                 raise urllib.error.HTTPError(url, fail[url], 'x', {}, io.BytesIO())
-            if url.endswith('.mp3') or url.endswith('.png'):
+            if url.endswith('.mp3') or url.endswith('.png') or url.endswith('.woff2'):
                 return b'x'
             if url in self.PAGES:
                 return self.PAGES[url]
@@ -42,6 +49,13 @@ class Crawl(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(sync, 'get', self.fake_get(fail)):
             sync.crawl(os.path.join(d, 'v'), HTML)
             return sorted(os.listdir(os.path.join(d, 'v', 'assets')))
+
+    def test_nested_plugin_files_are_saved(self):
+        page = 'https://larch.ink/assets/index-lg9nGv1N.js'
+        self.PAGES = {**self.PAGES, page: self.PAGES[page] + b';f="/plugins/rpg/ui/px.otf.woff2"'}
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sync, 'get', self.fake_get({})):
+            sync.crawl(os.path.join(d, 'v'), HTML)
+            self.assertTrue(os.path.exists(os.path.join(d, 'v', 'root', 'plugins', 'rpg', 'ui', 'px.otf.woff2')))
 
     def test_plain_404_on_filename_like_string_is_tolerated(self):
         self.assertIn('lazy-CkAB12_x.js', self.crawl({}))

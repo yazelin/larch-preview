@@ -18,7 +18,10 @@ REF = re.compile(r'(?:/?assets/|\./)([A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)*'
 
 
 # 網站根目錄的圖（logo、favicon），不在 assets/ 底下
-ROOT_REF = re.compile(r'["\'(]/([A-Za-z0-9_\-]+\.(?:png|svg|ico|webp))')
+ROOT_REF = re.compile(r'["\'(`]/([A-Za-z0-9_\-]+\.(?:png|svg|ico|webp)'
+                      r'|plugins/(?:[A-Za-z0-9_\-]+/)*[A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)*'
+                      r'\.(?:png|webp|svg|jpe?g|gif|woff2?|otf|ttf|m4a|mp3|ogg|json))')
+# plugins/ 底下是內建插件（例如 RPG）的字型、圖、音樂，放在網站根目錄而不是 assets/
 
 
 def extract_refs(text):
@@ -86,6 +89,7 @@ def crawl(dest, html):
         except urllib.error.HTTPError as e:
             missing.append(f'/{name}（{e.code}）')
             continue
+        os.makedirs(os.path.dirname(os.path.join(dest, 'root', name)), exist_ok=True)
         with open(os.path.join(dest, 'root', name), 'wb') as f:
             f.write(data)
     if fatal:

@@ -1,4 +1,4 @@
-import { follow, locate, lines } from './match.js';
+import { follow, lines, locate, plainText } from './match.js';
 
 const $ = s => document.querySelector(s);
 const player = $('#player');
@@ -55,13 +55,13 @@ function banner(text, isError = false) {
   b.classList.toggle('error', isError);
 }
 
+const isRpgCard = id => (project?.boards || []).some(b => (b.nodes || []).some(n => n.id === id && n.data?.pluginId === 'larch-rpg-system'));
+
 function shownLine() {
   const doc = player.contentDocument;
   const textEl = doc?.querySelector('.vn2-text');
   if (!textEl) return null;
-  const text = [...textEl.childNodes]
-    .filter(n => !n.classList?.contains('typing-caret'))
-    .map(n => n.textContent).join('').trim();
+  const text = plainText(textEl).trim();
   const speaker = doc.querySelector('.vn2-nameplate b')?.textContent.trim() || '';
   return { speaker, text };
 }
@@ -82,7 +82,8 @@ async function poll() {
     if (urlError) banner(urlError, true);
     else if (s.error) banner(`專案 JSON 有錯，畫面停在上一版：${s.error}`, true);
     else if (s.notice) banner(s.notice);
-    else if (s.card && !s.reachable) banner('這張卡從起點走不到，背景與音樂可能與實際不同。');
+    // RPG 地圖之間的移動寫在地圖資料裡、不是白板連線，白板上本來就走不到，不必警告
+    else if (s.card && !s.reachable && !isRpgCard(s.card)) banner('這張卡從起點走不到，背景與音樂可能與實際不同。');
     else if (s.card) banner('跳卡模式：變數與條件分支不會照實際路線。');
     else banner('');
     if (!s.error && last) {
