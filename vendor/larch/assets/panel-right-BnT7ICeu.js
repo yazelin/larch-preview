@@ -1,1 +1,0 @@
-import{c as t}from"./index-COLYJo1F.js";const e=[["rect",{width:"18",height:"18",x:"3",y:"3",rx:"2",key:"afitv7"}],["path",{d:"M9 3v18",key:"fh3hqa"}]],h=t("panel-left",e);const a=[["rect",{width:"18",height:"18",x:"3",y:"3",rx:"2",key:"afitv7"}],["path",{d:"M15 3v18",key:"14nvp0"}]],i=t("panel-right",a);export{h as P,i as a};
