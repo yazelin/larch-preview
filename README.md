@@ -2,7 +2,7 @@
 
 在本機用 [Larch](https://larch.ink) 自己的播放器預覽專案 JSON，不必推上雲端平台。預覽畫面上可以直接留回饋，回饋寫成檔案，AI Agent 讀了就能直接修復。
 
-專案具備「1 秒極速熱重載」與「精準回饋閉環」，修改台詞或立繪差分時可在 1 秒內即時看到效果，大幅節省雲端上傳與 API 限流等待時間。
+存檔後大約 1 秒，預覽自己重整，停在原本那張卡、那一句。改的時候不打雲端 API，就不會撞到官方的寫入限流（2026-10-06 實測：agent 連續第 13 次寫入回 429，要等 49～52 秒）。
 
 ### macOS / Linux
 
@@ -10,7 +10,7 @@
 git clone https://github.com/yazelin/larch-preview ~/larch-preview
 cd ~/larch-preview && python3 sync.py
 ln -s ~/larch-preview ~/.claude/skills/larch-preview     # Claude Code
-ln -s ~/larch-preview ~/.agents/skills/larch-preview     # Codex、agy 等讀 ~/.agents/skills 的 agent
+ln -s ~/larch-preview ~/.agents/skills/larch-preview     # Codex、agy、GitHub Copilot CLI 等讀 ~/.agents/skills 的 agent
 ```
 
 ### Windows（PowerShell 原生執行，免 WSL）
@@ -27,7 +27,7 @@ New-Item -ItemType Junction -Path "$HOME\.claude\skills\larch-preview" -Target "
 New-Item -ItemType Junction -Path "$HOME\.agents\skills\larch-preview" -Target "$HOME\larch-preview" -Force
 ```
 
-> **注意**：播放器前端靜態代碼版權屬於 Larch 官方，本倉庫不內建預先打包的第三方資產。初次安裝或需要更新播放器時，執行 `sync.py` 會自動從官方網站下載最新版前端資源快取到本機 `vendor/larch/`，完全合規且確保為最新版本。
+> **注意**：播放器前端的程式碼屬於 Larch 官方，這個 repo 不放。第一次安裝、或 Larch 平台更新之後，跑一次 `sync.py`，它會從 larch.ink 把前端抓到本機的 `vendor/larch/`（第一次大約 26 MB）。前端沒變就不會重抓，要整包重抓加 `--force`。
 
 ## 用法
 
