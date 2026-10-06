@@ -12,6 +12,7 @@
   <div id="banner" hidden></div>
   <div id="controls">
     <button id="view-toggle" type="button" title="在播放與白板之間切換（B）">白板</button>
+    <button id="sync-open" type="button" title="雲端同步（S）">雲端</button>
     <button id="fb-open" type="button" title="回饋（F）">回饋</button>
     <select id="jump" title="跳到哪張卡（網址也可以帶 ?card=<卡片id>&line=<第幾句>）"></select>
   </div>
@@ -75,6 +76,39 @@
       <footer>
         <button type="button" id="fb-cancel">取消</button>
         <button type="button" id="fb-submit">送出</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="sync-dialog">
+    <form method="dialog" id="sync-form">
+      <header>
+        <strong>雲端同步 (Larch Sync)</strong>
+        <span id="sync-status" style="margin-left:auto;font-size:12px;color:var(--muted)"></span>
+      </header>
+
+      <label>雲端專案 ID
+        <input id="sync-pid" placeholder="project-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required autocomplete="off">
+      </label>
+
+      <details id="sync-key-details">
+        <summary id="sync-key-summary">API 金鑰 (已就緒)</summary>
+        <div style="margin-top: 6px;">
+          <input id="sync-key" type="password" placeholder="留空使用本機預設金鑰 (~/.config/larch/key)">
+        </div>
+      </details>
+
+      <div id="sync-note" class="sync-box" style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--muted);background:rgba(0,0,0,0.2)">
+        <b style="color:var(--text)">💡 安全防呆提示：</b><br>
+        每次執行「拉取」或「推送」，本地專案皆會<b>自動建立帶時間戳的備份檔 (.bak)</b>，永不遺失歷史內容。
+      </div>
+
+      <p id="sync-error" style="color: var(--danger); margin: 0; font-size: 13px;" hidden></p>
+
+      <footer style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" id="sync-pull-btn">⬇ 從 Larch 拉取</button>
+        <button type="button" id="sync-push-btn" style="border-color: var(--accent); color: var(--accent);">⬆ 推送至 Larch</button>
+        <button type="button" id="sync-cancel-btn" style="margin-left: auto;">關閉</button>
       </footer>
     </form>
   </dialog>

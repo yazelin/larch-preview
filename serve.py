@@ -19,7 +19,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
-from lp import feedback, rewrite
+from lp import cloud, feedback, rewrite
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 VENDOR = os.path.join(ROOT, 'vendor', 'larch')
@@ -158,6 +158,14 @@ def make_server(preview, port, vendor=VENDOR):
                     return self.send(200, preview.load())
                 if path == '/api/lp/feedback':
                     return self.send(200, feedback.read_all(os.path.join(preview.dir, 'feedback')))
+                if path == '/api/lp/sync/info':
+                    proj = preview.load()
+                    return self.send(200, {
+                        'projectId': proj.get('id'),
+                        'title': proj.get('name'),
+                        'hasKey': bool(cloud.get_api_key()),
+                        'mtime': os.stat(preview.path).st_mtime
+                    })
             except Exception as e:
                 return self.send(500, {'error': describe(e)})
             if path == '/api/media/proxy':
@@ -208,7 +216,20 @@ def make_server(preview, port, vendor=VENDOR):
                     shot = b.get('screenshot') or ''
                     png = base64.b64decode(shot.split(',', 1)[1]) if shot.startswith('data:image/png;base64,') else None
                     return self.send(200, feedback.append(os.path.join(preview.dir, 'feedback'), b['entry'], png))
-            except (ValueError, KeyError) as e:
+                if path == '/api/lp/sync/pull':
+                    b = self.body()
+                    pid = b.get('projectId') or preview.load().get('id')
+                    custom_key = b.get('apiKey')
+                    res = cloud.pull(preview.path, pid, custom_key)
+                    return self.send(200, res)
+                if path == '/api/lp/sync/push':
+                    b = self.body()
+                    pid = b.get('projectId') or preview.load().get('id')
+                    custom_key = b.get('apiKey')
+                    summary = b.get('summary') or '從本地 larch-preview 同步'
+                    res = cloud.push(preview.path, pid, custom_key, summary=summary)
+                    return self.send(200, res)
+            except (ValueError, KeyError, FileNotFoundError, RuntimeError) as e:
                 return self.send(400, {'error': str(e)})
             return self.send(200, {})
 

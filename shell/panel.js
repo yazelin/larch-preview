@@ -272,8 +272,94 @@ async function back() {
   await go(to.card, to.line);
 }
 
+const syncDialog = $('#sync-dialog');
+
+async function openSync() {
+  if (dialog.open) closePanel();
+  $('#sync-error').hidden = true;
+  $('#sync-status').textContent = '讀取中…';
+  syncDialog.showModal();
+
+  try {
+    const res = await fetch('/api/lp/sync/info');
+    if (res.ok) {
+      const info = await res.json();
+      if (info.projectId && !$('#sync-pid').value) {
+        $('#sync-pid').value = info.projectId;
+      }
+      $('#sync-key-summary').textContent = info.hasKey ? 'API 金鑰 (已就緒)' : 'API 金鑰 (未配置)';
+      $('#sync-status').textContent = info.hasKey ? '金鑰已就緒' : '未偵測到金鑰';
+    }
+  } catch (e) {
+    $('#sync-status').textContent = '';
+  }
+}
+
+function closeSync() {
+  syncDialog.close();
+}
+
+async function handlePull() {
+  const pid = $('#sync-pid').value.trim();
+  if (!pid) {
+    $('#sync-error').textContent = '請填寫專案 ID';
+    $('#sync-error').hidden = false;
+    return;
+  }
+  if (!confirm(`確定要從 Larch 雲端拉取專案？\n這將會覆蓋本機專案檔案（動作前會自動建立 .bak 備份）。`)) return;
+
+  const btn = $('#sync-pull-btn');
+  btn.disabled = true;
+  btn.textContent = '拉取中…';
+  $('#sync-error').hidden = true;
+
+  try {
+    const customKey = $('#sync-key').value.trim();
+    const res = await api('/api/lp/sync/pull', { projectId: pid, apiKey: customKey || undefined });
+    if (res.error) throw new Error(res.error);
+    banner(`✅ 已從 Larch 成功拉取專案（版本 Rev ${res.revision}），已備份至 .bak`);
+    closeSync();
+    reloadPlayer();
+  } catch (e) {
+    $('#sync-error').textContent = e.message;
+    $('#sync-error').hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ 從 Larch 拉取';
+  }
+}
+
+async function handlePush() {
+  const pid = $('#sync-pid').value.trim();
+  if (!pid) {
+    $('#sync-error').textContent = '請填寫專案 ID';
+    $('#sync-error').hidden = false;
+    return;
+  }
+  if (!confirm(`確定要將本機專案整包推送至 Larch 雲端？\n專案 ID: ${pid}\n（動作前本機也會自動建立 .bak 備份）。`)) return;
+
+  const btn = $('#sync-push-btn');
+  btn.disabled = true;
+  btn.textContent = '推送中…';
+  $('#sync-error').hidden = true;
+
+  try {
+    const customKey = $('#sync-key').value.trim();
+    const res = await api('/api/lp/sync/push', { projectId: pid, apiKey: customKey || undefined });
+    if (res.error) throw new Error(res.error);
+    banner(`✅ 已成功推送至 Larch 雲端（最新版本 Rev ${res.revision}）！`);
+    closeSync();
+  } catch (e) {
+    $('#sync-error').textContent = e.message;
+    $('#sync-error').hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬆ 推送至 Larch';
+  }
+}
+
 function onKey(e) {
-  if (e.key === 'ArrowLeft' && !dialog.open && !(e.ctrlKey || e.metaKey || e.altKey)
+  if (e.key === 'ArrowLeft' && !dialog.open && !syncDialog?.open && !(e.ctrlKey || e.metaKey || e.altKey)
       && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')
       && player.contentDocument?.querySelector('.vn2-text')) {
     e.preventDefault();
@@ -281,11 +367,18 @@ function onKey(e) {
     back();
     return;
   }
-  if ((e.key === 'b' || e.key === 'B') && !dialog.open && !(e.ctrlKey || e.metaKey || e.altKey)
+  if ((e.key === 'b' || e.key === 'B') && !dialog.open && !syncDialog?.open && !(e.ctrlKey || e.metaKey || e.altKey)
       && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')) {
     e.preventDefault();
     e.stopImmediatePropagation();
     setView(!inBoard());
+    return;
+  }
+  if ((e.key === 's' || e.key === 'S') && !dialog.open && !syncDialog?.open && !(e.ctrlKey || e.metaKey || e.altKey)
+      && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openSync();
     return;
   }
   if (e.key !== 'f' && e.key !== 'F') return;
@@ -314,6 +407,12 @@ if (inBoard()) setView(true);
 $('#jump').addEventListener('change', e => { go(e.target.value || null); e.target.blur(); player.focus(); });
 $('#fb-regrant').addEventListener('click', async () => { captureDenied = false; dialog.close(); shot = await grab(); dialog.showModal(); shotStatus(); });
 dialog.addEventListener('cancel', e => { e.preventDefault(); closePanel(); });
+
+$('#sync-open').addEventListener('click', openSync);
+$('#sync-cancel-btn').addEventListener('click', closeSync);
+$('#sync-pull-btn').addEventListener('click', handlePull);
+$('#sync-push-btn').addEventListener('click', handlePush);
+syncDialog.addEventListener('cancel', e => { e.preventDefault(); closeSync(); });
 
 await refreshProject();
 { // 網址帶 ?card=<卡片id>&line=<第幾句> 就直接從那裡開始

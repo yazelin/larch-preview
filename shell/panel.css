@@ -13,15 +13,15 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 /* 放上方中央：左上角是 RPG 地圖的血條與任務欄、右上角是播放器的關閉鈕 */
 #controls { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 10;
   display: flex; gap: 8px; align-items: center; max-width: calc(100% - 32px); }
-#fb-open, #view-toggle { padding: 8px 14px; border-radius: 999px;
+#fb-open, #view-toggle, #sync-open { padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
 #jump { width: auto; min-width: 0; max-width: 320px; padding: 7px 10px; border-radius: 999px;
   border: 1px solid var(--line); background: rgba(20,20,20,.8); }
 body.grabbing #controls, body.grabbing #banner { visibility: hidden; }
-dialog#fb { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
+dialog#fb, dialog#sync-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-dialog#fb::backdrop { background: rgba(0,0,0,.35); }
-#fb-form { display: grid; gap: 10px; }
+dialog#fb::backdrop, dialog#sync-dialog::backdrop { background: rgba(0,0,0,.35); }
+#fb-form, #sync-form { display: grid; gap: 10px; }
 #fb-form header, #fb-form footer, .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 #fb-form footer { justify-content: flex-end; }
 #fb-shot-status { color: var(--muted); font-size: 12px; margin-left: auto; }
