@@ -394,6 +394,7 @@ const hookPlayerKeys = () => player.contentWindow.addEventListener('keydown', on
 player.addEventListener('load', hookPlayerKeys);
 if (player.contentDocument?.readyState === 'complete') hookPlayerKeys();
 $('#fb-open').addEventListener('click', openPanel);
+$('#lib-open').addEventListener('click', () => window.open('/shell/library.html', 'larch-library'));
 $('#fb-cancel').addEventListener('click', closePanel);
 $('#fb-submit').addEventListener('click', submit);
 $('#fb-at').addEventListener('change', onAtChange);

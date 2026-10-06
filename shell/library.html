@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Larch 素材庫（唯讀）</title>
+  <link rel="stylesheet" href="/shell/panel.css">
+  <style>
+    html, body { height: auto; overflow: auto; }
+    body { padding: 16px; font: 14px/1.5 system-ui, sans-serif; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 24px 0 8px; color: var(--accent); }
+    .muted { color: var(--muted); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .card .thumb { aspect-ratio: 1; background: #0b0c0e; display: flex; align-items: center; justify-content: center; }
+    .card img, .card video { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+    .card audio { width: 100%; }
+    .card .meta { padding: 6px 8px; font-size: 12px; word-break: break-all; }
+    .card .meta b { display: block; font-size: 13px; color: var(--text); }
+    .unused { color: var(--danger); }
+    .char { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .char header { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+    .char header img { width: 72px; height: 72px; object-fit: contain; background: #0b0c0e; border-radius: 6px; }
+    #filter { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    #filter button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; }
+    #filter button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>素材庫 <span class="muted">唯讀，要改請改專案 JSON 或在 Larch 網頁改完拉回來</span></h1>
+  <p class="muted" id="summary"></p>
+  <div id="filter"></div>
+  <h2>角色</h2>
+  <div id="chars"></div>
+  <h2>素材</h2>
+  <div class="grid" id="media"></div>
+
+  <script type="module">
+    import { library } from '/shell/library.js';
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const usedText = n => n ? `卡片用到 ${n} 次` : '<span class="unused">卡片沒用到</span>';
+    let kind = 'all', lib = null, mtime = null;
+
+    function thumb(m) {
+      if (m.type === 'audio') return `<audio controls preload="none" src="${esc(m.src)}"></audio>`;
+      if (m.type === 'video') return `<video muted preload="metadata" src="${esc(m.src)}"></video>`;
+      if (m.type === 'document') return '<span class="muted">文件</span>';
+      return `<img loading="lazy" src="${esc(m.src)}" alt="${esc(m.name)}">`;
+    }
+
+    function render() {
+      const types = [...new Set(lib.media.map(m => m.type || 'other'))];
+      $('#summary').textContent = `${lib.characters.length} 個角色，${lib.media.length} 個素材（${types.map(t => `${t} ${lib.media.filter(m => (m.type || 'other') === t).length}`).join('、')}）`;
+      $('#filter').innerHTML = ['all', ...types].map(t => `<button type="button" data-k="${esc(t)}" aria-pressed="${t === kind}">${t === 'all' ? '全部' : esc(t)}</button>`).join('');
+      $('#chars').innerHTML = lib.characters.map(c => `
+        <div class="char"><header>${c.portrait ? `<img loading="lazy" src="${esc(c.portrait)}" alt="">` : ''}
+          <div><b>${esc(c.name)}</b><div class="muted">${esc(c.id)}${c.voice ? '　聲音：' + esc(c.voice) : ''}</div></div></header>
+          <div class="grid">${c.expressions.map(e => `<div class="card"><div class="thumb"><img loading="lazy" src="${esc(e.src)}" alt="${esc(e.name)}"></div>
+            <div class="meta"><b>${esc(e.name)}</b>${esc(e.kind)}　${usedText(e.used)}</div></div>`).join('') || '<span class="muted">沒有差分</span>'}</div>
+        </div>`).join('') || '<p class="muted">沒有角色</p>';
+      $('#media').innerHTML = lib.media.filter(m => kind === 'all' || (m.type || 'other') === kind).map(m => `
+        <div class="card"><div class="thumb">${thumb(m)}</div>
+          <div class="meta"><b>${esc(m.name || m.id)}</b>${esc(m.type || '')}　${usedText(m.used)}</div></div>`).join('') || '<p class="muted">沒有素材</p>';
+    }
+
+    $('#filter').addEventListener('click', e => { const k = e.target.dataset?.k; if (k) { kind = k; render(); } });
+
+    async function load() {
+      lib = library(await (await fetch('/api/lp/project')).json());
+      render();
+    }
+
+    // 專案檔一改就重抓，跟預覽頁一樣
+    async function poll() {
+      try {
+        const s = await (await fetch('/api/lp/state')).json();
+        if (s.mtime !== mtime) { mtime = s.mtime; await load(); }
+      } catch { /* 伺服器關了：保持畫面 */ }
+      setTimeout(poll, 2000);
+    }
+    poll();
+  </script>
+</body>
+</html>

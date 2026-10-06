@@ -13,7 +13,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 /* 放上方中央：左上角是 RPG 地圖的血條與任務欄、右上角是播放器的關閉鈕 */
 #controls { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 10;
   display: flex; gap: 8px; align-items: center; max-width: calc(100% - 32px); }
-#fb-open, #view-toggle, #sync-open { padding: 8px 14px; border-radius: 999px;
+#fb-open, #view-toggle, #sync-open, #lib-open { padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: rgba(20,20,20,.8); color: var(--accent); cursor: pointer; }
 #jump { width: auto; min-width: 0; max-width: 320px; padding: 7px 10px; border-radius: 999px;
   border: 1px solid var(--line); background: rgba(20,20,20,.8); }
