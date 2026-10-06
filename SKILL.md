@@ -61,7 +61,18 @@ python3 ~/larch-preview/serve.py --project <專案id>         # 抓自己線上�
 
 卡片的圖、配樂可以放在公開 GitHub repo，JSON 填 `https://cdn.jsdelivr.net/gh/<帳號>/<repo>@<版本>/<路徑>`，本機預覽與 Larch 都載得到（RPG 地圖的圖例外，本機代理只放行 Larch 網域）。兩個坑（2026-10-07《仙泉．香布纏》實測）：
 
-- **整個 repo 超過 50 MB 會 403**，回應內文是 `Package size exceeded the configured limit of 50 MB`。快取裡的還拿得到，所以症狀是「有些圖慢、有些出不來、重新整理又好」，一次抓不準。素材多的作品改成**一張卡片一個 tag**：每個 tag 是只放那張卡用到的檔案的孤兒 commit（用 main 上現成的 blob，repo 不會變大），網址的 `@main` 換成 `@<tag>`；好幾張卡共用的檔案放在第一張用到它的卡片，網址只有一個。同一批 64 張實測：31 MB 的小分支 64/64，250 MB 的大 repo 56/64。
+- **一個版本超過 50 MB 就 403**，回應內文是 `Package size exceeded the configured limit of 50 MB`。jsDelivr 算的是 `@<版本>` 那個時間點整個 repo 有哪些檔案（不看歷史），所以**釘在大 repo 的某個 commit 也一樣超過**（《格莉奇・調查篇》的 `@8b099dd` 是 686 MB）。快取裡的還拿得到，症狀是「有些圖慢、有些出不來、重新整理又好」，一次抓不準。
+- **解法是孤兒 tag**：一個沒有上一層、只放這部作品用到的檔案的 commit，打 tag，網址的 `@main` 換成 `@<tag>`。用的是 repo 裡現成的 blob，不必 checkout，repo 也不會變大：
+  ```bash
+  export GIT_INDEX_FILE=$(mktemp -u)          # 暫存 index，不動工作目錄
+  git ls-tree -r -z main -- <路徑…> | git update-index -z --index-info
+  tree=$(git write-tree); unset GIT_INDEX_FILE
+  git tag <tag> $(git commit-tree $tree -m "jsDelivr：<作品>")
+  git push origin <tag>
+  ```
+  同一批 64 張實測：31 MB 的孤兒分支 64/64，250 MB 的大 repo 56/64。
+- **怎麼分組看用到的總量**：作品用到的檔案加起來 40 MB 以內，一個 tag 就夠（調查篇用到 1,360 個檔案共 43 MB，雖然 repo 有 747 MB）。超過就分，《仙泉．香布纏》用一張卡片一個 tag（共 92 個，最大 17 MB）：好幾張卡共用的檔案放在第一張用到它的卡片，網址只有一個。實作在 larch-taoyuan 的 `buchan/jsd_tags.py`。
+- **tag 打了就不改**：換圖就打下一版（`card-v3-8-r2`）再換網址，舊網址照樣能用。原本用 `@main` 為的是「重錄推上去不用改網址」，改成 tag 就沒有這個方便，要自己換。
 - **tag 名不要用「v＋數字」開頭**：`v2-act1` 會被當成版本號解析不到，回 404。加前綴（`card-v2-act1`）就好。
 - 驗收要把每個網址實際 GET 一次看狀態碼，不要只抓幾張；同一個網址在大 repo 上這次 403、下次 200 都發生過。
 
