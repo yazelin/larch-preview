@@ -1,11 +1,20 @@
-"""回饋檔：<專案資料夾>/feedback/feedback.jsonl，一行一筆。面板與 agent 共用這支，靠檔案鎖避免互相蓋掉。"""
 import datetime
-import fcntl
 import json
 import os
 import secrets
 import sys
 from contextlib import contextmanager
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
+
 
 ALLOWED = ('at', 'text', 'voice', 'staging', 'note')
 TZ = datetime.timezone(datetime.timedelta(hours=8))
@@ -18,8 +27,32 @@ def _file(fb_dir):
 @contextmanager
 def _locked(fb_dir):
     os.makedirs(fb_dir, exist_ok=True)
-    with open(os.path.join(fb_dir, '.lock'), 'w') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    lock_path = os.path.join(fb_dir, '.lock')
+    if fcntl:
+        with open(lock_path, 'w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_UN)
+                except OSError:
+                    pass
+    elif msvcrt:
+        with open(lock_path, 'a+b') as lock:
+            try:
+                msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+            except OSError:
+                pass
+            try:
+                yield
+            finally:
+                try:
+                    lock.seek(0)
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
+    else:
         yield
 
 
