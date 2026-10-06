@@ -40,6 +40,7 @@ python3 serve.py --project <專案id>         # 用 ~/.config/larch/key 抓自�
 - **專案格式**：專案 JSON 吃三種形狀：裸專案、agent API 的 `{"project": …}`、市集回應。
 - **不需要 Larch 帳號/專案**：最少只要 `boards`（見 `fixtures/minimal/project.json`），`settings`、`characters`、卡片座標等欄位會由伺服器自動補上。
 - **本地素材支援**：素材可以寫相對路徑（`bg/night.webp`、`voice/l0.mp3`），從專案 JSON 所在資料夾讀取，還沒上傳雲端也能完整預覽。
+- **素材放 GitHub 走 jsDelivr**：JSON 填 `cdn.jsdelivr.net/gh/<帳號>/<repo>@<版本>/<路徑>`，本機預覽載得到（RPG 地圖的圖例外）。兩個坑：jsDelivr 把整個 repo 當一個套件，**超過 50 MB 就回 403**（快取過期的那幾張會慢或出不來），作品大了就改成一張卡片一個 tag、網址指到那個 tag；**tag 名不要用「v＋數字」開頭**，`v2-act1` 會被當成版本號而 404。
 - **1 秒熱重載**：修改專案 JSON 後，畫面一秒內自動重整並停在原本那張卡。
 - **白板模式**：按鍵盤 `B` 或點擊上方「白板」按鈕，切換到 Larch 官方的白板畫面（在本機跑，只能看）。
 - **即時回饋**：按鍵盤 `F` 彈出回饋面板，自動帶入卡片 ID、行數與即時截圖。
