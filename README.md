@@ -4,7 +4,7 @@
 
 專案具備「1 秒極速熱重載」與「精準回饋閉環」，修改台詞或立繪差分時可在 1 秒內即時看到效果，大幅節省雲端上傳與 API 限流等待時間。
 
-## 安裝
+### macOS / Linux
 
 ```bash
 git clone https://github.com/yazelin/larch-preview ~/larch-preview
@@ -13,7 +13,21 @@ ln -s ~/larch-preview ~/.claude/skills/larch-preview     # Claude Code
 ln -s ~/larch-preview ~/.agents/skills/larch-preview     # Codex、agy 等讀 ~/.agents/skills 的 agent
 ```
 
-> **注意**：播放器前端靜態代碼版權屬於 Larch 官方，本倉庫不內建預先打包的第三方資產。初次安裝或需要更新播放器時，執行 `python3 sync.py` 會自動從官方網站下載最新版前端資源快取到本機 `vendor/larch/`，完全合規且確保為最新版本。
+### Windows（PowerShell 原生執行，免 WSL）
+
+在開始功能表搜尋打開「PowerShell」，依序複製貼上執行：
+
+```powershell
+git clone https://github.com/yazelin/larch-preview "$HOME\larch-preview"
+cd "$HOME\larch-preview"
+python sync.py
+
+# 建立 Agent Skill 連結（免管理員權限）
+New-Item -ItemType Junction -Path "$HOME\.claude\skills\larch-preview" -Target "$HOME\larch-preview" -Force
+New-Item -ItemType Junction -Path "$HOME\.agents\skills\larch-preview" -Target "$HOME\larch-preview" -Force
+```
+
+> **注意**：播放器前端靜態代碼版權屬於 Larch 官方，本倉庫不內建預先打包的第三方資產。初次安裝或需要更新播放器時，執行 `sync.py` 會自動從官方網站下載最新版前端資源快取到本機 `vendor/larch/`，完全合規且確保為最新版本。
 
 ## 用法
 
