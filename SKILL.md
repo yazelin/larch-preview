@@ -6,7 +6,7 @@ description: 在本機用 Larch 自己的播放器預覽專案 JSON，讓使用�
 # larch-preview
 
 本機伺服器供應 Larch 前端的快取，只把專案資料換成本機的 JSON，所以畫面就是 Larch 真正的播放器。
-repo 在 `~/larch-preview`（私有，前端快取不可公開散布）。
+repo 在 `~/larch-preview`。前端快取由 `python3 sync.py` 從官網取得並存放於本機 `vendor/larch/`。
 
 ## 什麼時候用
 
@@ -108,4 +108,4 @@ RPG 地圖之間靠地圖事件跳轉、不是白板連線，所以跳到地圖�
 
 ## 前端快取
 
-`vendor/larch/` 由每日 Action 同步，`git -C ~/larch-preview pull` 就拿得到最新版；要立刻更新跑 `python3 ~/larch-preview/sync.py`。
+`vendor/larch/` 由使用者執行 `python3 ~/larch-preview/sync.py` 自動從 larch.ink 下載快取到本機；日後若官網更新播放器，重新執行 `python3 ~/larch-preview/sync.py` 即可同步最新版。

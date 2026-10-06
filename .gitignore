@@ -1,6 +1,12 @@
 __pycache__/
 node_modules/
+vendor/larch/
 vendor/larch.new/
 larch-*/
 .superpowers/
 smoke-fail.png
+fixtures/bench_demo/
+live_check.mjs
+plugin_harness.mjs
+toc_test.mjs
+toc_video.mjs
