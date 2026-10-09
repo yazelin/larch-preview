@@ -43,14 +43,14 @@ python3 serve.py --project <專案id>         # 用 ~/.config/larch/key 抓自�
 - **素材放 GitHub 走 jsDelivr**：JSON 填 `cdn.jsdelivr.net/gh/<帳號>/<repo>@<版本>/<路徑>`，本機預覽載得到（RPG 地圖的圖例外）。兩個坑：jsDelivr 把整個 repo 當一個套件，**超過 50 MB 就回 403**（快取過期的那幾張會慢或出不來），釘在大 repo 的某個 commit 也一樣超過（算的是那個版本整個 repo 的檔案）。解法是**孤兒 tag**：只放作品用到的檔案、沒有上一層的 commit，網址指到那個 tag，用到的超過 40 MB 就分成幾個（例如一張卡片一個）；**tag 名不要用「v＋數字」開頭**，`v2-act1` 會被當成版本號而 404。
 - **1 秒熱重載**：修改專案 JSON 後，畫面一秒內自動重整並停在原本那張卡。
 - **白板模式**：按鍵盤 `B` 或點擊上方「白板」按鈕，切換到 Larch 官方的白板畫面（在本機跑，只能看）。
-- **即時回饋**：按鍵盤 `F` 彈出回饋面板，自動帶入卡片 ID、行數與即時截圖。
+- **即時回饋**：按鍵盤 `F` 彈出回饋面板，自動帶入卡片 ID、行數與即時截圖。在 RPG 地圖卡上另外記下目前地圖、主角座標、這次遊玩改過的變數與最近的事件（`rpg` 欄位），因為 RPG 在 sandbox iframe 裡、讀不到畫面上的字。
 - **素材庫（唯讀）**：上方「素材庫」另開一頁，列出角色的立繪與差分、專案的圖片音訊影片，標出每個被卡片用到幾次。只能看，要改請改專案 JSON。
 
 ## 給 AI Agent：回饋修復迴圈
 
 1. 在背景開著 `python3 serve.py <project.json>`。
 2. 讀取待處理回饋：`python3 -m lp.feedback list <專案資料夾>`（一行一筆 JSON）。
-3. 取得位置（`boardId`、`nodeId`、`lineIndex`）與修改內容（`text` / `voice` / `staging` / `screenshot`）。
+3. 取得位置（`boardId`、`nodeId`、`lineIndex`）與修改內容（`text` / `voice` / `staging` / `screenshot`）；RPG 地圖卡看 `rpg`（`map`、`pos`、`vars`、`recent`）。
 4. 修改專案後標記完成：`python3 -m lp.feedback done <專案資料夾> <id> "改了什麼"`。
 
 ## 授權

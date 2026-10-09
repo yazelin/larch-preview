@@ -16,7 +16,7 @@ except ImportError:
     msvcrt = None
 
 
-ALLOWED = ('at', 'text', 'voice', 'staging', 'note')
+ALLOWED = ('at', 'text', 'voice', 'staging', 'note', 'rpg')
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 
 

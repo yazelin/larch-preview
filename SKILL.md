@@ -94,6 +94,7 @@ python3 -m lp.feedback archive-done <專案資料夾>               # 舊版留�
 | `text` | `from` → `to`，照改 |
 | `voice` | `kind`：`misread`（`chars` 哪個字、`should` 該怎麼唸）／`tone`／`redo`／`other` |
 | `staging` | `tags`：`actor` `expression` `background` `bgm` `effect` `transition` `other`，細節在 `note` |
+| `rpg` | 只在 RPG 地圖卡上有：`map`（目前地圖卡 id）、`pos`（主角座標與朝向）、`vars`（這次遊玩中改過的變數，例如劇情進度 `phase`、`year`）、`recent`（最近 15 個事件：變數改動、跳卡、音樂、存檔）。RPG 在 sandbox iframe 裡讀不到畫面上的字，用這些對回程式裡的事件。變數只記這次遊玩中有改動的（讀檔或跳卡進來的舊值不會出現） |
 | `screenshot` | 相對於專案資料夾的 PNG，**打開看**使用者當下看到什麼 |
 
 - **專案 JSON 是從劇本產生的，就改劇本再重新產生**，不要只改 JSON，下次重產會被蓋回去。

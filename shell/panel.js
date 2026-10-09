@@ -68,6 +68,48 @@ function banner(text, isError = false) {
   b.classList.toggle('error', isError);
 }
 
+// RPG 地圖在 sandbox iframe 裡，DOM 讀不到；引擎會用 postMessage 把變數（含 rpgState：每張地圖的主角座標）送給播放器那一層，
+// 這裡旁聽，回饋時附上「哪張地圖、座標、劇情變數、最近的事件」，讓修的人對得到位置。
+let rpg = { vars: {}, card: null, map: null, pos: null, recent: [] };
+function onRpgMsg(e) {
+  const d = e.data;
+  if (!d || typeof d.type !== 'string' || !d.type.startsWith('larch:')) return;
+  if (d.pluginCardId && d.pluginCardId !== 'map') rpg.card = d.pluginCardId;   // 送訊息的插件卡（RPG 地圖卡 id）
+  if (d.type === 'larch:set') {
+    if (d.name === 'rpgState') {
+      try {
+        const st = JSON.parse(d.value || '{}');
+        for (const [k, v] of Object.entries(st)) {
+          if (k.startsWith('@') || !v || typeof v.x !== 'number') continue;
+          const old = rpg.vars['@pos:' + k];
+          const now = `${v.x},${v.y},${v.direction || ''}`;
+          if (old !== now) { rpg.vars['@pos:' + k] = now; rpg.map = k; rpg.pos = { x: v.x, y: v.y, direction: v.direction }; }
+        }
+      } catch { /* 不是 JSON：略過 */ }
+      return;
+    }
+    rpg.vars[d.name] = d.value;
+    rpg.recent.push({ set: d.name, value: d.value });
+  } else {
+    if (d.type === 'larch:ready' || d.type === 'larch:rpg-assets-wanted') return;   // 載入雜訊
+    const { type, eventId, target, battle, actionId } = d;
+    rpg.recent.push(Object.fromEntries(Object.entries({ type, eventId, target, battle, actionId }).filter(([, v]) => v !== undefined)));
+  }
+  if (rpg.recent.length > 15) rpg.recent.splice(0, rpg.recent.length - 15);
+}
+function rpgContext() {
+  const vars = Object.fromEntries(Object.entries(rpg.vars).filter(([k]) => !k.startsWith('@pos:')).map(([k, v]) => [k, typeof v === 'string' && v.length > 200 ? v.slice(0, 200) + '…' : v]));
+  if (!rpg.map && !rpg.card && !Object.keys(vars).length) return null;
+  return { card: rpg.card, map: rpg.map, pos: rpg.pos, vars, recent: rpg.recent.slice() };
+}
+const cardTitle = id => { for (const b of project?.boards || []) for (const n of b.nodes || []) if (n.id === id) return n.data?.title || n.data?.name || ''; return ''; };
+function rpgSummary(c) {
+  if (!c) return '';
+  const id = c.map || c.card, title = id ? cardTitle(id) : '';
+  const pick = ['phase', 'year'].filter(k => k in c.vars).map(k => `${k}=${c.vars[k]}`).join('，');
+  return `RPG：${id ? (title ? `${title}（${id}）` : id) : '（地圖未知）'}${c.pos ? `（${c.pos.x}, ${c.pos.y}）` : ''}${pick ? '　' + pick : ''}`;
+}
+
 const isRpgCard = id => (project?.boards || []).some(b => (b.nodes || []).some(n => n.id === id && n.data?.pluginId === 'larch-rpg-system'));
 
 function shownLine() {
@@ -207,6 +249,7 @@ async function openPanel() {
   fillAt(here());
   onAtChange();
   shotStatus();
+  { const c = rpgContext(), el = $('#fb-rpg'); if (el) { el.textContent = rpgSummary(c); el.hidden = !c; } }
   dialog.showModal();
 }
 
@@ -231,6 +274,8 @@ async function submit() {
   if (tags.length || stNote) entry.staging = { tags, note: stNote };
   const note = $('#fb-note').value.trim();
   if (note) entry.note = note;
+  const rc = rpgContext();
+  if (rc) entry.rpg = rc;
   if (!entry.text && !entry.voice && !entry.staging && !entry.note) {
     $('#fb-error').textContent = '沒有填任何內容。';
     $('#fb-error').hidden = false;
@@ -390,7 +435,11 @@ function onKey(e) {
 }
 
 document.addEventListener('keydown', onKey, true);
-const hookPlayerKeys = () => player.contentWindow.addEventListener('keydown', onKey, true);
+const hookPlayerKeys = () => {
+  player.contentWindow.addEventListener('keydown', onKey, true);
+  rpg = { vars: {}, card: null, map: null, pos: null, recent: [] };   // 播放器重整＝重新開始，舊的 RPG 狀態不算
+  player.contentWindow.addEventListener('message', onRpgMsg);
+};
 player.addEventListener('load', hookPlayerKeys);
 if (player.contentDocument?.readyState === 'complete') hookPlayerKeys();
 $('#fb-open').addEventListener('click', openPanel);
