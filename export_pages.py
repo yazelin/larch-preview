@@ -19,10 +19,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 VENDOR = os.path.join(ROOT, 'vendor', 'larch')
 from lp import rewrite
 
-INDEX_HTML_TEMPLATE = """<!doctype html>
-<html lang="zh-Hant">
-  <head>
-    <script>
+POLYFILL_SCRIPT = """    <script>
       (function() {
         // 沙盒 (Sandboxed iframe) 環境下 localStorage / sessionStorage Polyfill
         try { var _ = window.localStorage; } catch (e) {
@@ -75,9 +72,7 @@ INDEX_HTML_TEMPLATE = """<!doctype html>
           return origFetch.apply(this, arguments);
         };
       })();
-    </script>
-__VENDOR_INDEX_HEAD_AND_BODY__
-"""
+    </script>"""
 
 def patch_js_files(assets_dir):
     """修補 Vite 打包的根路徑絕對參考，使之在 GitHub Pages 次目錄下正常運作。"""
@@ -164,22 +159,25 @@ def export_static_site(project_input, out_dir, copy_assets=False):
         elif not os.path.exists(d):
             shutil.copy2(s, d)
 
-    # 處理 index.html
+    # 處理 index.html：保留完整 vendor HTML，僅在 <head> 後注入沙盒 Polyfill 並轉換為相對路徑
     vendor_index_path = os.path.join(VENDOR, 'index.html')
     with open(vendor_index_path, 'r', encoding='utf-8') as f:
         vendor_index = f.read()
 
-    # 擷取 vendor index.html 中 </head> 之後的部分
-    head_pos = vendor_index.find('</head>')
-    body_part = vendor_index[head_pos:] if head_pos != -1 else vendor_index
-
     # 將絕對路徑 /assets/ 轉成相對路徑 ./assets/
-    body_part = body_part.replace('href="/assets/', 'href="./assets/')
-    body_part = body_part.replace('src="/assets/', 'src="./assets/')
-    body_part = body_part.replace('href="/favicon', 'href="./favicon')
-    body_part = body_part.replace('href="/larch-', 'href="./larch-')
+    vendor_index = vendor_index.replace('href="/assets/', 'href="./assets/')
+    vendor_index = vendor_index.replace('src="/assets/', 'src="./assets/')
+    vendor_index = vendor_index.replace('href="/favicon', 'href="./favicon')
+    vendor_index = vendor_index.replace('href="/larch-', 'href="./larch-')
+    vendor_index = vendor_index.replace('href="/manifest', 'href="./manifest')
 
-    final_index = INDEX_HTML_TEMPLATE.replace('__VENDOR_INDEX_HEAD_AND_BODY__', body_part)
+    # 注入 Polyfill
+    head_tag = '<head>'
+    if head_tag in vendor_index:
+        final_index = vendor_index.replace(head_tag, f"{head_tag}\n{POLYFILL_SCRIPT}\n", 1)
+    else:
+        final_index = f"{POLYFILL_SCRIPT}\n{vendor_index}"
+
     with open(os.path.join(out_dir, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(final_index)
     print("✅ 生成並修補 index.html")
