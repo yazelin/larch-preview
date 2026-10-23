@@ -104,6 +104,17 @@ def patch_js_files(assets_dir):
             with open(fpath, 'w', encoding='utf-8') as f:
                 f.write(code)
 
+        elif fname.startswith('Preview-'):
+            with open(fpath, 'r', encoding='utf-8') as f:
+                code = f.read()
+            # 防止選項或文字是物件時拋出 (e || "").replace is not a function
+            target = 'da=n.useCallback(e=>(e||"").replace('
+            repl = 'da=n.useCallback(e=>(typeof e==="string"?e:(e?.text||e?.label||String(e||""))).replace('
+            if target in code:
+                code = code.replace(target, repl)
+                with open(fpath, 'w', encoding='utf-8') as f:
+                    f.write(code)
+
 def export_static_site(project_input, out_dir, copy_assets=False):
     project_input = os.path.abspath(project_input)
     if os.path.isdir(project_input):
