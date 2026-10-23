@@ -101,12 +101,13 @@ def patch_js_files(assets_dir):
             with open(fpath, 'r', encoding='utf-8') as f:
                 code = f.read()
             # 繞過首頁根路徑比對，使 GitHub Pages 子路徑直接啟動遊戲
-            target = 'function Re(e=location.pathname){return M&&e==="/"?M.appPath:e}'
-            repl = 'function Re(e=location.pathname){return M?M.appPath:e}'
-            if target in code:
-                code = code.replace(target, repl)
-                with open(fpath, 'w', encoding='utf-8') as f:
-                    f.write(code)
+            code = re.sub(
+                r'function Re\(e=(?:window\.)?location\.pathname\)\{return M&&e==="/"\?M\.appPath:e\}',
+                'function Re(e=window.location.pathname){return M?M.appPath:e}',
+                code
+            )
+            with open(fpath, 'w', encoding='utf-8') as f:
+                f.write(code)
 
 def export_static_site(project_input, out_dir, copy_assets=False):
     project_input = os.path.abspath(project_input)
