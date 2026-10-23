@@ -129,6 +129,23 @@ RPG 地圖之間靠地圖事件跳轉、不是白板連線，所以跳到地圖�
 - 平台自己的 AI 卡（AI 對話、AI 導演）、雲端存檔、彈幕、登入功能：要打 larch.ink 的 API，本機一律沒有。
 - 插件卡在 sandbox iframe 裡，回饋判斷不出那一刻在插件的哪一步，請使用者寫在備註。
 
+## 匯出純靜態網頁 / GitHub Pages（突破專案大小上限 & 支援 Larch 插件卡全螢幕內嵌）
+
+當專案過大（例如幾百個節點、數百 MB 素材，超出 Larch 雲端上傳限制）時，可使用 `export_pages.py` 將專案匯出為純靜態網頁：
+
+```bash
+# 匯出靜態網頁（預設使用軟連結，節省本機空間供本機測試）
+python3 ~/larch-preview/export_pages.py path/to/project.json [輸出目錄]
+
+# 匯出要 push 上 GitHub Pages 的版本（實體複製所有素材檔案）
+python3 ~/larch-preview/export_pages.py path/to/project.json [輸出目錄] --copy-assets
+```
+
+- **無後端執行**：完全不依賴 Python 或 Node.js 後端，任何靜態託管（GitHub Pages, Cloudflare Pages）皆可直接執行。
+- **支援任意子目錄**：已修補 Vite 動態載入路徑與路由，放在 `username.github.io/repo/` 也能運作。
+- **沙盒 Storage 相容**：內建記憶體 Polyfill，即便被放在沙盒 `<iframe>` 中也不會觸發 `SecurityError`。
+- **回嵌 Larch 專案**：在另一個外層 Larch 專案中使用「插件卡（Plugin Card）」，設定 `pluginPresentation: "fullscreen"` 即可無縫內嵌該 GitHub Pages 遊戲，並透過 `larch:complete` 雙向通訊返回主線。
+
 ## 前端快取
 
 `vendor/larch/` 由使用者執行 `python3 ~/larch-preview/sync.py` 自動從 larch.ink 下載快取到本機；日後若官網更新播放器，重新執行 `python3 ~/larch-preview/sync.py` 即可同步最新版。
