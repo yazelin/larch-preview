@@ -59,6 +59,8 @@ python3 ~/larch-preview/serve.py --project <專案id>         # 抓自己線上�
 
 ## 素材放 GitHub 走 jsDelivr
 
+**先決定要不要用 jsDelivr**：素材所在的 repo 已經開了 GitHub Pages（例如每晚發文的日記網站），就直接用 Pages 網址，不要走 jsDelivr。素材放在沒開 Pages 的公開 repo、內容做完就固定，才用 jsDelivr 加下面的孤兒 tag。2026-11-03《優理的圖文日記》實測同一批 12 張圖、兩邊輪流抓兩輪：Pages 每張中位數約 0.32 秒、24 次全部 200；jsDelivr `@main` 冷啟動中位數 0.94 秒、最慢 3.8 秒，快取後 0.18 秒，但 repo 的 docs 有 94 MB，24 次裡有 4 次回 50 MB 上限的 403。每天都有新圖的作品走 jsDelivr，得每天打 tag、換網址。
+
 卡片的圖、配樂可以放在公開 GitHub repo，JSON 填 `https://cdn.jsdelivr.net/gh/<帳號>/<repo>@<版本>/<路徑>`，本機預覽與 Larch 都載得到（RPG 地圖的圖例外，本機代理只放行 Larch 網域）。兩個坑（2026-10-07《仙泉．香布纏》實測）：
 
 - **一個版本超過 50 MB 就 403**，回應內文是 `Package size exceeded the configured limit of 50 MB`。jsDelivr 算的是 `@<版本>` 那個時間點整個 repo 有哪些檔案（不看歷史），所以**釘在大 repo 的某個 commit 也一樣超過**（《格莉奇・調查篇》的 `@8b099dd` 是 686 MB）。快取裡的還拿得到，症狀是「有些圖慢、有些出不來、重新整理又好」，一次抓不準。
