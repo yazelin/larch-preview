@@ -1,7 +1,7 @@
 name: sync-larch
 on:
   schedule:
-    - cron: '17 22 * * *'   # 台灣時間 06:17
+    - cron: '17 19 * * *'   # 台灣時間 03:17
   workflow_dispatch:
     inputs:
       force:

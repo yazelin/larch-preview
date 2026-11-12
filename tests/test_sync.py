@@ -1,4 +1,4 @@
-import io, os, tempfile, unittest, urllib.error
+import io, os, tempfile, threading, time, unittest, urllib.error
 from unittest import mock
 import sync
 
@@ -81,6 +81,207 @@ class Crawl(unittest.TestCase):
         with mock.patch.object(sync.urllib.request, 'urlopen', urlopen), mock.patch.object(sync.time, 'sleep'):
             self.assertEqual(sync.get('https://larch.ink/x'), b'ok')
         self.assertEqual(len(calls), 3)
+
+
+class CrawlRetries(unittest.TestCase):
+    @staticmethod
+    def page(hash_name):
+        return f'<script type="module" src="/assets/index-{hash_name}.js"></script>'
+
+    @staticmethod
+    def missing(url):
+        return urllib.error.HTTPError(url, 404, 'x', {}, io.BytesIO())
+
+    def test_normal_crawl_succeeds_without_refreshing_homepage(self):
+        html = self.page('aaaaaaaa')
+        calls = []
+
+        def fake_get(url):
+            calls.append(url)
+            return b''
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sync, 'get', fake_get):
+            result = sync.crawl_with_retries(os.path.join(d, 'vendor'), html)
+            self.assertEqual(result, 'index-aaaaaaaa.js')
+            self.assertTrue(os.path.exists(os.path.join(d, 'vendor', 'sfx', 'rain.mp3')))
+        self.assertFalse(any('?sync=' in url for url in calls))
+
+    def test_changed_homepage_version_restarts_with_new_html(self):
+        html_a = self.page('aaaaaaaa')
+        html_b = self.page('bbbbbbbb')
+        calls = []
+        failed_a = False
+
+        def fake_get(url):
+            nonlocal failed_a
+            calls.append(url)
+            if url == f'{sync.BASE}/assets/index-aaaaaaaa.js' and not failed_a:
+                failed_a = True
+                raise self.missing(url)
+            if url.startswith(f'{sync.BASE}/?sync='):
+                return html_b.encode()
+            return b''
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sync, 'get', fake_get):
+            result = sync.crawl_with_retries(os.path.join(d, 'vendor'), html_a)
+        self.assertEqual(result, 'index-bbbbbbbb.js')
+        self.assertIn(f'{sync.BASE}/assets/index-bbbbbbbb.js', calls)
+        self.assertTrue(any('?sync=' in url for url in calls))
+
+    def test_unchanged_homepage_waits_then_retries(self):
+        html = self.page('aaaaaaaa')
+        calls = []
+        failures = 0
+
+        def fake_get(url):
+            nonlocal failures
+            calls.append(url)
+            if url == f'{sync.BASE}/assets/index-aaaaaaaa.js' and failures == 0:
+                failures += 1
+                raise self.missing(url)
+            if url.startswith(f'{sync.BASE}/?sync='):
+                return html.encode()
+            return b''
+
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(sync, 'get', fake_get), \
+                mock.patch.object(sync, 'RETRY_WAIT_SECONDS', 0), \
+                mock.patch.object(sync.time, 'sleep') as sleep:
+            result = sync.crawl_with_retries(os.path.join(d, 'vendor'), html)
+        self.assertEqual(result, 'index-aaaaaaaa.js')
+        sleep.assert_called_once_with(0)
+        self.assertEqual(calls.count(f'{sync.BASE}/assets/index-aaaaaaaa.js'), 2)
+
+    def test_four_failed_rounds_leave_existing_cache_untouched(self):
+        html = self.page('aaaaaaaa')
+        with tempfile.TemporaryDirectory() as d:
+            vendor = os.path.join(d, 'larch')
+            os.makedirs(vendor)
+            with open(os.path.join(vendor, 'VERSION'), 'w') as f:
+                f.write('index-bbbbbbbb.js\n')
+            with open(os.path.join(vendor, 'sentinel.txt'), 'w') as f:
+                f.write('既有快取')
+
+            def fake_get(url):
+                if url == f'{sync.BASE}/':
+                    return html.encode()
+                if url.startswith(f'{sync.BASE}/?sync='):
+                    return html.encode()
+                if url == f'{sync.BASE}/assets/index-aaaaaaaa.js':
+                    raise self.missing(url)
+                return b''
+
+            with mock.patch.object(sync, 'VENDOR', vendor), \
+                    mock.patch.object(sync, 'get', fake_get), \
+                    mock.patch.object(sync, 'RETRY_WAIT_SECONDS', 0), \
+                    mock.patch.object(sync.time, 'sleep'), \
+                    mock.patch('sys.argv', ['sync.py']):
+                with self.assertRaisesRegex(RuntimeError, 'index-aaaaaaaa.js'):
+                    sync.main()
+
+            with open(os.path.join(vendor, 'VERSION')) as f:
+                self.assertEqual(f.read(), 'index-bbbbbbbb.js\n')
+            with open(os.path.join(vendor, 'sentinel.txt')) as f:
+                self.assertEqual(f.read(), '既有快取')
+            self.assertFalse(os.path.exists(vendor + '.new'))
+
+    def test_main_uses_last_successful_version_for_unchanged_check(self):
+        html_a = self.page('aaaaaaaa')
+        html_b = self.page('bbbbbbbb')
+        with tempfile.TemporaryDirectory() as d:
+            vendor = os.path.join(d, 'larch')
+            os.makedirs(vendor)
+            with open(os.path.join(vendor, 'VERSION'), 'w') as f:
+                f.write('index-bbbbbbbb.js\n')
+            with open(os.path.join(vendor, 'sentinel.txt'), 'w') as f:
+                f.write('既有快取')
+            failed_a = False
+
+            def fake_get(url):
+                nonlocal failed_a
+                if url == f'{sync.BASE}/':
+                    return html_a.encode()
+                if url.startswith(f'{sync.BASE}/?sync='):
+                    return html_b.encode()
+                if url == f'{sync.BASE}/assets/index-aaaaaaaa.js' and not failed_a:
+                    failed_a = True
+                    raise self.missing(url)
+                return b''
+
+            with mock.patch.object(sync, 'VENDOR', vendor), \
+                    mock.patch.object(sync, 'get', fake_get), \
+                    mock.patch.object(sync, 'RETRY_WAIT_SECONDS', 0), \
+                    mock.patch('sys.argv', ['sync.py']):
+                sync.main()
+
+            with open(os.path.join(vendor, 'VERSION')) as f:
+                self.assertEqual(f.read(), 'index-bbbbbbbb.js\n')
+            with open(os.path.join(vendor, 'sentinel.txt')) as f:
+                self.assertEqual(f.read(), '既有快取')
+            self.assertFalse(os.path.exists(vendor + '.new'))
+
+    def test_main_writes_last_successful_round_version(self):
+        html_a = self.page('aaaaaaaa')
+        html_b = self.page('bbbbbbbb')
+        with tempfile.TemporaryDirectory() as d:
+            vendor = os.path.join(d, 'larch')
+            os.makedirs(vendor)
+            with open(os.path.join(vendor, 'VERSION'), 'w') as f:
+                f.write('index-cccccccc.js\n')
+            failed_a = False
+
+            def fake_get(url):
+                nonlocal failed_a
+                if url == f'{sync.BASE}/':
+                    return html_a.encode()
+                if url.startswith(f'{sync.BASE}/?sync='):
+                    return html_b.encode()
+                if url == f'{sync.BASE}/assets/index-aaaaaaaa.js' and not failed_a:
+                    failed_a = True
+                    raise self.missing(url)
+                return b''
+
+            with mock.patch.object(sync, 'VENDOR', vendor), \
+                    mock.patch.object(sync, 'get', fake_get), \
+                    mock.patch('sys.argv', ['sync.py']):
+                sync.main()
+
+            with open(os.path.join(vendor, 'VERSION')) as f:
+                self.assertEqual(f.read(), 'index-bbbbbbbb.js\n')
+            self.assertTrue(os.path.exists(os.path.join(vendor, 'index.html')))
+            self.assertFalse(os.path.exists(vendor + '.new'))
+
+    def test_parallel_crawl_fetches_each_asset_only_once(self):
+        html = ('<script src="/assets/index-aaaaaaaa.js"></script>'
+                '<script src="/assets/shared-cccccccc.js"></script>'
+                '<link href="/assets/style-dddddddd.css">')
+        calls = []
+        active = 0
+        max_active = 0
+        lock = threading.Lock()
+
+        def fake_get(url):
+            nonlocal active, max_active
+            with lock:
+                calls.append(url)
+                active += 1
+                max_active = max(max_active, active)
+            try:
+                time.sleep(0.01)
+                if url.endswith('index-aaaaaaaa.js'):
+                    return b'import "./shared-cccccccc.js"'
+                if url.endswith('style-dddddddd.css'):
+                    return b'url(/assets/shared-cccccccc.js)'
+                return b''
+            finally:
+                with lock:
+                    active -= 1
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(sync, 'get', fake_get):
+            sync.crawl(os.path.join(d, 'vendor'), html)
+        shared_url = f'{sync.BASE}/assets/shared-cccccccc.js'
+        self.assertEqual(calls.count(shared_url), 1)
+        self.assertGreater(max_active, 1)
 
 if __name__ == '__main__':
     unittest.main()
