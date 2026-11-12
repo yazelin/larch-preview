@@ -29,6 +29,8 @@ New-Item -ItemType Junction -Path "$HOME\.agents\skills\larch-preview" -Target "
 
 > **注意**：播放器前端的程式碼屬於 Larch 官方，這個 repo 不放。第一次安裝、或 Larch 平台更新之後，跑一次 `sync.py`，它會從 larch.ink 把前端抓到本機的 `vendor/larch/`（第一次大約 26 MB）。前端沒變就不會重抓，要整包重抓加 `--force`。
 
+`sync.py` 以 8 條並行下載前端檔案。若同步途中遇到帶雜湊檔案回 404，會重新抓避開快取的首頁並重爬；首頁版本改變時立即重抓，版本相同時等 120 秒再試，最多爬 4 輪。每日排程在台灣時間 03:17 執行。
+
 ## 用法
 
 ```bash
